@@ -4,20 +4,6 @@
   "release_notes": "Fix infinite update loop: updater now force-kills ANPR.exe before replacing files so locked exe is always replaceable",
   "files": [
     {
-      "name": "updater.exe",
-      "dest": "updater.exe",
-      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/updater.exe",
-      "sha256": "a87411a8c3e618c18df47d1eeaa080c09cb3a72ff7b4aa87599d9464a8f52703",
-      "size": 7280767
-    },
-    {
-      "name": "ANPR.exe",
-      "dest": "ANPR.exe",
-      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/ANPR.exe",
-      "sha256": "33e5e145d862639b81eca388002222298146464454372e08983ed8dcf1ee5abd",
-      "size": 10930529
-    },
-    {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
