@@ -1,14 +1,14 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "build_date": "2026-04-29",
-  "release_notes": "Fix: updater now launched directly (no batch file) with built-in delay - reliable on all Windows systems",
+  "release_notes": "Fix: OTA update now fully reliable - launcher handles updater launch (eliminates Windows Job Object issue)",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
-      "sha256": "492eff37486c97c186746d465f40fdb28cca7b9a2a575acf9da490c90f484ce2",
-      "size": 1577472
+      "sha256": "adba8bd454e460c4f12461a07909b79093871c9ab402108d28d7288373d8004f",
+      "size": 1576960
     },
     {
       "name": ".res3.enc",
