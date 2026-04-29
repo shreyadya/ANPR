@@ -5734,7 +5734,9 @@ class ANPRWebEnginePage(QWebEnginePage):
 
 # UPDATE SERVER — change these two lines to point at your GitHub repo
 _UPDATE_VERSION_URL = "https://raw.githubusercontent.com/shreyadya/ANPR/main/version.json"
-_UPDATE_CHECK_DELAY_S = 5           # seconds after startup before first check
+_UPDATE_CHECK_DELAY_S = 2           # seconds after startup before first check
+_UPDATE_CHECK_RETRY_INTERVAL_S = 8  # retry during the same run to ride out GitHub propagation delay
+_UPDATE_CHECK_MAX_WINDOW_S = 180    # keep checking for a short window after launch
 _UPDATE_CHECK_ENABLED = True        # set False to disable updates entirely
 
 
@@ -5813,27 +5815,37 @@ class UpdateCheckerThread(QThread):
         # Skip if placeholder URL not yet configured
         if 'OWNER/REPO' in _UPDATE_VERSION_URL:
             return
-        try:
-            _sep = '&' if '?' in _UPDATE_VERSION_URL else '?'
-            _url = f"{_UPDATE_VERSION_URL}{_sep}{_urlencode({'ts': int(_time.time())})}"
-            resp = requests.get(
-                _url,
-                timeout=15,
-                headers={'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
-            )
-            if resp.status_code != 200:
-                logger.info(f"OTA check skipped: status={resp.status_code} url={_url}")
-                return
-            remote = resp.json()
-            local_ver = _get_local_version()
-            remote_ver = str(remote.get('version', '0'))
-            logger.info(f"OTA check: local={local_ver} remote={remote_ver} url={_url}")
-            needs_update, reason = _manifest_requires_update(remote)
-            logger.info(f"OTA decision: needs_update={needs_update} reason={reason}")
-            if needs_update:
-                self.update_available.emit(remote)
-        except Exception:
-            logger.exception("OTA check failed")
+        _deadline = _time.time() + _UPDATE_CHECK_MAX_WINDOW_S
+        _attempt = 0
+        while _time.time() <= _deadline:
+            _attempt += 1
+            try:
+                _sep = '&' if '?' in _UPDATE_VERSION_URL else '?'
+                _url = f"{_UPDATE_VERSION_URL}{_sep}{_urlencode({'ts': int(_time.time())})}"
+                resp = requests.get(
+                    _url,
+                    timeout=15,
+                    headers={'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
+                )
+                if resp.status_code != 200:
+                    logger.info(f"OTA check skipped: attempt={_attempt} status={resp.status_code} url={_url}")
+                else:
+                    remote = resp.json()
+                    local_ver = _get_local_version()
+                    remote_ver = str(remote.get('version', '0'))
+                    logger.info(f"OTA check: attempt={_attempt} local={local_ver} remote={remote_ver} url={_url}")
+                    needs_update, reason = _manifest_requires_update(remote)
+                    logger.info(f"OTA decision: attempt={_attempt} needs_update={needs_update} reason={reason}")
+                    if needs_update:
+                        self.update_available.emit(remote)
+                        return
+            except Exception:
+                logger.exception(f"OTA check failed on attempt={_attempt}")
+
+            _remaining = _deadline - _time.time()
+            if _remaining <= 0:
+                break
+            _time.sleep(min(_UPDATE_CHECK_RETRY_INTERVAL_S, _remaining))
 
 
 class UpdateDownloadThread(QThread):
