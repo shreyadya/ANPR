@@ -1,7 +1,7 @@
 {
-  "version": "1.0.16",
+  "version": "1.0.17",
   "build_date": "2026-04-30",
-  "release_notes": "OTA: add cache-busting and version logging for first-run update checks",
+  "release_notes": "UI: rename left panel heading from Summary Detection back to Latest Detection",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "92bbabe8f389415e0799af684a6525b3e97e222d93f5e931539e3a871b8b980f",
+      "sha256": "8f57b1c34a1ba1b537a978e37daaaf1edfd3163b4371246a7583a783b81ec508",
       "size": 116452
     }
   ]
