@@ -1,7 +1,7 @@
 {
-  "version": "1.0.14",
+  "version": "1.0.15",
   "build_date": "2026-04-30",
-  "release_notes": "UI: rename left panel heading from Summary Detection to Latest Detection",
+  "release_notes": "UI: rename left panel heading from Latest Detection back to Summary Detection",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "e5b1b1e428f0e4f309b204266f00ab1db95c0244813b335157d097bdd7aa051b",
+      "sha256": "92bbabe8f389415e0799af684a6525b3e97e222d93f5e931539e3a871b8b980f",
       "size": 116452
     }
   ]
