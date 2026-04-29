@@ -354,6 +354,14 @@ def main():
             os.path.exists(flag_path) or
             (os.path.exists(manifest_path) and os.path.exists(pending_dir))
         )
+        if not update_triggered:
+            bootstrap_triggered = _bootstrap_update_after_crash(
+                app_dir,
+                process.returncode,
+                manifest_path,
+                pending_dir,
+            )
+            update_triggered = update_triggered or bootstrap_triggered
         _log_launcher_event(
             app_dir,
             'post-exit returncode=' + str(process.returncode) +
@@ -543,6 +551,84 @@ def _do_update_in_launcher(app_dir):
             _t2.sleep(0.5)
 
     return _new_version[0]
+
+
+def _bootstrap_update_after_crash(app_dir, returncode, manifest_path, pending_dir):
+    """Fallback for very old clients: if python dies before writing any update artifacts,
+    fetch the GitHub manifest and stage the pending update directly from the launcher.
+    """
+    if returncode != 3221226505:
+        return False
+
+    version_path = os.path.join(app_dir, 'version.json')
+
+    def log(msg):
+        _log_launcher_event(app_dir, msg)
+        try:
+            from datetime import datetime as _dt
+            log_path = os.path.join(app_dir, '_updater.log')
+            ts = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
+            with open(log_path, 'a', encoding='utf-8') as lf:
+                lf.write(f'[{ts}] [launcher-bootstrap] {msg}\n')
+        except Exception:
+            pass
+
+    def version_tuple(value):
+        try:
+            return tuple(int(part) for part in str(value).strip().split('.'))
+        except Exception:
+            return (0,)
+
+    try:
+        import json as _json
+        import shutil as _sh
+        import time as _time
+        import urllib.request as _urlreq
+
+        local_version = '0.0.0'
+        if os.path.exists(version_path):
+            try:
+                with open(version_path, 'r', encoding='utf-8-sig') as vf:
+                    local_version = str(_json.load(vf).get('version', '0.0.0'))
+            except Exception as exc:
+                log(f'could not read local version.json: {exc}')
+
+        manifest_url = (
+            'https://raw.githubusercontent.com/shreyadya/ANPR/main/version.json'
+            f'?ts={int(_time.time())}'
+        )
+        req = _urlreq.Request(manifest_url, headers={'Cache-Control': 'no-cache'})
+        with _urlreq.urlopen(req, timeout=20) as resp:
+            remote_manifest = _json.loads(resp.read().decode('utf-8'))
+
+        remote_version = str(remote_manifest.get('version', '0.0.0'))
+        if version_tuple(remote_version) <= version_tuple(local_version):
+            log(f'bootstrap skipped: local_version={local_version} remote_version={remote_version}')
+            return False
+
+        log(f'bootstrap update staging started: local_version={local_version} remote_version={remote_version}')
+        _sh.rmtree(pending_dir, ignore_errors=True)
+        os.makedirs(pending_dir, exist_ok=True)
+
+        for item in remote_manifest.get('files', []):
+            name = item.get('name', '')
+            url = item.get('url', '')
+            if not name or not url:
+                continue
+            dest = os.path.join(pending_dir, name)
+            log(f'downloading {name}')
+            req = _urlreq.Request(url, headers={'Cache-Control': 'no-cache'})
+            with _urlreq.urlopen(req, timeout=60) as resp, open(dest, 'wb') as fh:
+                fh.write(resp.read())
+
+        with open(manifest_path, 'w', encoding='utf-8') as mf:
+            _json.dump(remote_manifest, mf, indent=2)
+
+        log('bootstrap update staging complete')
+        return True
+    except Exception as exc:
+        log(f'bootstrap update failed: {exc}')
+        return False
 
 
 def _show_update_toast(version):
