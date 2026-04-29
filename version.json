@@ -1,7 +1,7 @@
 {
   "version": "1.0.3",
   "build_date": "2026-04-29",
-  "release_notes": "Increased updater delay to 5 seconds for better compatibility",
+  "release_notes": "Increased updater delay to 5 seconds to fix crash on update install",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -16,13 +16,6 @@
       "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/.res3.enc",
       "sha256": "b1e0e807f6c18f61b3f2f339cf5849150b4750dcda30620167195457dd0b465e",
       "size": 116452
-    },
-    {
-      "name": ".res4.enc",
-      "dest": ".res4.enc",
-      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/.res4.enc",
-      "sha256": "0d02d9ea1e1461ec74797757c782bc49df2dcb48f68335bd825d95e3ffda4532",
-      "size": 5686648
     }
   ]
 }
