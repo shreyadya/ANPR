@@ -1,21 +1,14 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "build_date": "2026-04-29",
-  "release_notes": "Increased updater delay to 5 seconds to fix crash on update install",
+  "release_notes": "Fixed crash on Download & Install (error 3221226505) - app now exits cleanly before updater runs",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
-      "sha256": "3e6b22f52dbd3910924c3a4441c309b497e359dc8c7acbfa356cac71e3793ffe",
+      "sha256": "6ca0385155a3787819c47c0dc3875662b6f9584f8640641ef98b835e9bef1841",
       "size": 1578496
-    },
-    {
-      "name": ".res3.enc",
-      "dest": ".res3.enc",
-      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/.res3.enc",
-      "sha256": "b1e0e807f6c18f61b3f2f339cf5849150b4750dcda30620167195457dd0b465e",
-      "size": 116452
     }
   ]
 }
