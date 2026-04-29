@@ -1,8 +1,15 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.7",
   "build_date": "2026-04-29",
-  "release_notes": "Definitive fix for error 3221226505: use TerminateProcess to bypass DLL cleanup crashes, batch now force-kills launcher before updater runs",
+  "release_notes": "Fix infinite update loop: updater now force-kills ANPR.exe before replacing files so locked exe is always replaceable",
   "files": [
+    {
+      "name": "updater.exe",
+      "dest": "updater.exe",
+      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/updater.exe",
+      "sha256": "a87411a8c3e618c18df47d1eeaa080c09cb3a72ff7b4aa87599d9464a8f52703",
+      "size": 7280767
+    },
     {
       "name": "ANPR.exe",
       "dest": "ANPR.exe",
