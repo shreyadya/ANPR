@@ -1,7 +1,7 @@
 {
-  "version": "1.0.13",
+  "version": "1.0.14",
   "build_date": "2026-04-30",
-  "release_notes": "Fix: update now works regardless of installed version - shows installing window and version toast on restart",
+  "release_notes": "UI: rename left panel heading from Summary Detection to Latest Detection",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "b1e0e807f6c18f61b3f2f339cf5849150b4750dcda30620167195457dd0b465e",
+      "sha256": "e5b1b1e428f0e4f309b204266f00ab1db95c0244813b335157d097bdd7aa051b",
       "size": 116452
     }
   ]

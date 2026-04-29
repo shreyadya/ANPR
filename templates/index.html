@@ -1,0 +1,3126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ANPR System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"></noscript>
+</head>
+<body>
+<script>
+(function(){
+  if(sessionStorage.getItem('anpr_transitioning')==='1'){
+    sessionStorage.removeItem('anpr_transitioning');
+    var ov=document.createElement('div');
+    ov.id='pageTransitionOverlay';
+    ov.style.cssText='position:fixed;inset:0;background:#1e1e1e;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;';
+    ov.innerHTML='<div style="width:36px;height:36px;border:3px solid rgba(23,151,161,0.3);border-top-color:#1797A1;border-radius:50%;animation:_pto_spin 0.7s linear infinite;"></div><span style="color:#94a3b8;font-size:0.9rem;letter-spacing:0.05em;">Loading dashboard...</span><style>@keyframes _pto_spin{to{transform:rotate(360deg);}}</style>';
+    document.documentElement.appendChild(ov);
+    document.addEventListener('DOMContentLoaded',function(){
+      var el=document.getElementById('pageTransitionOverlay');
+      if(el){el.style.transition='opacity 0.25s';el.style.opacity='0';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},280);}
+    });
+  }
+})();
+</script>
+<style>
+    /* Custom tooltip on Test button */
+    .custom-tooltip {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 10px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #e2e8f0;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(245,158,11,0.4);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,158,11,0.15);
+        pointer-events: none;
+        z-index: 9999;
+        gap: 6px;
+        align-items: center;
+        font-family: 'Segoe UI', sans-serif;
+        letter-spacing: 0.01em;
+    }
+    .custom-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: rgba(245,158,11,0.5);
+    }
+    #mainTestBtn:hover .custom-tooltip,
+    #mainTestBtn:focus .custom-tooltip {
+        display: flex;
+    }
+    #mainTestBtn:not([disabled]) .custom-tooltip {
+        display: none !important;
+    }
+</style>
+<!-- ── System init banner: shows OCR / YOLO / DB / CAM status while loading ── -->
+<div id="initBanner" style="
+    display: flex; flex-direction: column;
+    background: #f8fafc;
+    color: #1a3a5c;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    z-index: 9999;
+    border: 3px solid #1797A1;
+    box-shadow: 0 2px 8px rgba(15,41,66,0.08);
+    position: relative;">
+
+    <div style="display:flex; align-items:center; padding: 8px 20px; gap:10px;">
+        <!-- Left: subtle label -->
+        <span id="initLabel" style="font-size:0.65em; font-weight:600; letter-spacing:0.12em; color:#94a3b8; text-transform:uppercase; white-space:nowrap; flex-shrink:0;">Initializing</span>
+        <script>
+        (function(){
+            var el = document.getElementById('initLabel');
+            var dots = ['', '.', '..', '...'], i = 0;
+            var iv = setInterval(function(){
+                i = (i + 1) % dots.length;
+                el.textContent = 'Initializing' + dots[i];
+            }, 500);
+            // Stop once banner is hidden
+            var obs = new MutationObserver(function(){
+                if (el.closest('#initBanner') && el.closest('#initBanner').style.display === 'none') {
+                    clearInterval(iv); obs.disconnect();
+                }
+            });
+            obs.observe(document.getElementById('initBanner'), { attributes: true, attributeFilter: ['style'] });
+        })();
+        </script>
+
+        <!-- Status badges + spinner — pushed to far right -->
+        <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
+            <span id="stsYOLO" class="init-badge">MODEL ⏳</span>
+            <span id="stsDB"   class="init-badge">DATABASE ⏳</span>
+            <span id="stsCam"  class="init-badge">CAMERA ⏳</span>
+            <div id="initSpinner" style="
+                width:14px; height:14px; border-radius:50%;
+                border:2px solid #e2e8f0;
+                border-top-color:#1797A1;
+                animation: initSpin 0.75s linear infinite; flex-shrink:0;"></div>
+        </div>
+    </div>
+
+    <div id="initFailRow" style="display:none;"></div>
+</div>
+
+<style>
+    @keyframes initSpin { to { transform: rotate(360deg); } }
+
+    .init-badge {
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.72em;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        background: #eff6ff;
+        border: 1px solid #1797A1;
+        color: #1a3a5c;
+        transition: background 0.3s, color 0.3s, border-color 0.3s;
+    }
+</style>
+    <div class="header-bar">
+        <div class="header-left">
+            <div class="d-flex-start" id="deptBrandingArea">
+                <img id="deptLogoImg" src="{{ url_for('static', filename=dept_logo_filename) if dept_logo_filename else '' }}" alt="Department Logo" class="company-logo"{% if not dept_logo_filename %} style="display:none"{% endif %}>
+                <div class="header-text" id="deptTextArea">
+                    <span class="dept-name" id="deptTitleDisplay">{{ dept_title }}</span>
+                    <span class="govt-name" id="deptSubtitleDisplay">{{ dept_subtitle }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="config-btn" style="margin-right: 20px;" onclick="openConfigModal()">
+                <i class="bi bi-gear" style="margin-right: 8px;"></i> Configure
+            </button>
+            <button class="close-app-btn" style="margin-right: 20px;" onclick="closeApplication()">
+                <i class="bi bi-x-lg" style="margin-right: 8px;"></i> Close Application
+            </button>
+            <div class="status-indicator" style="margin-right: 20px;">
+                <span class="status-dot" style="margin-right: 8px;"></span>
+                <span>System Active</span>
+            </div>
+            <span id="currentTime"></span>
+        </div>
+    </div>
+    
+    <!-- Configuration Modal -->
+    <div id="configModal" class="config-modal">
+        <div class="config-modal-content">
+            <div class="config-header">
+                <h2><i class="bi bi-gear"></i> System Configuration</h2>
+                <span class="config-close" onclick="closeConfigModal()">&times;</span>
+            </div>
+            <div class="config-body-layout">
+                <!-- Left Sidebar Navigation -->
+                <div class="config-sidebar">
+                    <ul class="config-nav" id="configNav">
+                        <div id="navSlider"></div>
+                        <li class="config-nav-item active" data-section="camera" onclick="switchConfigSection('camera', this)">
+                            <i class="bi bi-camera-video"></i>
+                            <span>Camera</span>
+                            <i class="bi bi-check-circle-fill config-nav-check" id="navCheckCamera"></i>
+                        </li>
+                        <li class="config-nav-item" data-section="mqtt" onclick="switchConfigSection('mqtt', this)">
+                            <i class="bi bi-wifi"></i>
+                            <span>MQTT</span>
+                            <i class="bi bi-check-circle-fill config-nav-check" id="navCheckMqtt"></i>
+                        </li>
+                        <li class="config-nav-item" data-section="branding" onclick="switchConfigSection('branding', this)">
+                            <i class="bi bi-badge-ad"></i>
+                            <span>Header Branding</span>
+                            <i class="bi bi-check-circle-fill config-nav-check" id="navCheckBranding"></i>
+                        </li>
+                        <li class="config-nav-item" data-section="database" onclick="switchConfigSection('database', this)">
+                            <i class="bi bi-database-gear"></i>
+                            <span>Database</span>
+                            <i class="bi bi-check-circle-fill config-nav-check" id="navCheckDatabase"></i>
+                        </li>
+                        <li class="config-nav-item" data-section="model" onclick="switchConfigSection('model', this)">
+                            <i class="bi bi-cpu"></i>
+                            <span>Model</span>
+                            <i class="bi bi-check-circle-fill config-nav-check" id="navCheckModel"></i>
+                        </li>
+                        <li class="config-nav-item" data-section="settings" onclick="switchConfigSection('settings', this)">
+                            <i class="bi bi-shield-lock"></i>
+                            <span>Settings</span>
+                            <i class="bi bi-check-circle-fill config-nav-check" id="navCheckSettings"></i>
+                        </li>
+                        <li class="config-nav-item" data-section="report" onclick="switchConfigSection('report', this)">
+                            <i class="bi bi-clipboard-data"></i>
+                            <span>Report</span>
+                            <i class="bi bi-check-circle-fill config-nav-check" id="navCheckReport"></i>
+                        </li>
+                        <li class="config-nav-item" data-section="imageanalysis" onclick="switchConfigSection('imageanalysis', this)">
+                            <i class="bi bi-search"></i>
+                            <span>Image Analysis</span>
+                        </li>
+                    </ul>
+                    <div class="config-sidebar-footer">
+                        <button type="button" class="config-save-btn config-finish-btn" onclick="saveConfiguration(event)">
+                            Save Configuration
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Content Area -->
+                <div class="config-content-area">
+                    <form id="configForm" onsubmit="saveConfiguration(event)">
+                        <!-- Hidden field to persist blur model state (always true since we removed the toggle) -->
+                        <input type="hidden" id="enableBlurModel" name="enableBlurModel" value="true">
+
+                        <!-- === CAMERA SECTION === -->
+                        <div class="config-panel active" id="configPanelCamera">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-camera-video"></i> Camera Configuration</h3>
+                                <p>Configure RTSP camera feed for monitoring</p>
+                            </div>
+                            <div class="config-section">
+                                <h3><i class="bi bi-camera-video" style="margin-right: 3px;"></i> Front Camera</h3>
+                                <div class="config-field" style="margin-bottom: 18px;">
+                                    <div id="resolutionOverlay" style="display:none; text-align:center; margin-bottom:8px; opacity:0; transition:opacity 0.3s ease, transform 0.3s ease; transform:translateY(-4px);">
+                                        <span id="resolutionBadge" style="display:inline-block; background:linear-gradient(135deg,rgba(134,239,172,0.90),rgba(74,222,128,0.95)); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:#14532d; font-size:13px; font-weight:700; padding:6px 18px; border-radius:20px; white-space:nowrap; letter-spacing:0.5px; text-shadow:0 1px 4px rgba(255,255,255,0.30); border:1px solid rgba(187,247,208,0.70); box-shadow:0 2px 10px rgba(74,222,128,0.45);"></span>
+                                    </div>
+                                    <div id="cameraPreviewBox" style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; min-height: 200px; display: flex; align-items: center; justify-content: center; position: relative;">
+                                        <div id="cameraNoFeedPlaceholder" style="display:flex; flex-direction:column; align-items:center; padding: 30px;">
+                                            <i class="bi bi-camera-video-off" style="font-size: 48px; color: #ccc; display: block; margin-bottom: 8px;"></i>
+                                            <span style="color: #999; font-size: 14px;" id="cameraFeedStatus">No feed</span>
+                                        </div>
+                                        <img id="cameraPreviewImg" src="" alt="Camera Feed"
+                                            style="display:none; width:100%; max-height:240px; object-fit:contain; border-radius:10px;">
+                                    </div>
+                                </div>
+                                <div class="config-field">
+                                    <label for="rtspUrl">RTSP URL</label>
+                                    <input type="text" id="rtspUrl" name="rtspUrl" placeholder="rtsp://192.168.1.100:554/stream" required>
+                                </div>
+                                <div class="camera-btn-bar">
+                                    <div class="camera-btn-group">
+                                        <button type="button" class="cam-btn cam-btn-check" onclick="checkAndSaveCamera()">
+                                            <i class="bi bi-play-circle"></i> Check
+                                        </button>
+                                        <button type="button" class="cam-btn cam-btn-stop" onclick="stopCameraPreview()">
+                                            <i class="bi bi-stop-circle"></i> Stop
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="config-section" style="margin-top: 16px;">
+                                <h3><i class="bi bi-geo-alt" style="margin-right: 3px;"></i> Location</h3>
+                                <div class="config-field">
+                                    <label for="locationName">WeighBridge Name</label>
+                                    <input type="text" id="locationName" name="locationName" placeholder="e.g. Mine Entrance" required>
+                                </div>
+                                <div class="config-field">
+                                    <label for="locationId">WeighBridge ID</label>
+                                    <input type="text" id="locationId" name="locationId" placeholder="e.g. WB-001">
+                                </div>
+                                <div class="config-field">
+                                    <label for="locationCoords">WeighBridge Coordinates <span style="color:#999; font-weight:400; font-size:12px;">(optional)</span></label>
+                                    <input type="text" id="locationCoords" name="locationCoords" placeholder="e.g. 27.12345, 76.54321" required>
+                                </div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <div></div>
+                                <button type="button" class="config-next-btn" onclick="switchConfigSection('mqtt', document.querySelector('[data-section=mqtt]'))">Next <i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- === MQTT SECTION === -->
+                        <div class="config-panel" id="configPanelMqtt">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-wifi"></i> MQTT Configuration</h3>
+                                <p>Configure MQTT broker settings for trigger-based detection</p>
+                            </div>
+                            <div class="config-section">
+                                <h3><i class="bi bi-wifi" style="margin-right: 3px;"></i> MQTT Broker Settings</h3>
+                                <div class="config-field" style="margin-bottom: 20px;">
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                        <input type="checkbox" id="mqttEnabled" name="mqttEnabled" onchange="toggleMqttFields()" style="width: auto; cursor: pointer;">
+                                        <span style="color: #4CAF50; font-weight: 600;">Enable MQTT Integration</span>
+                                    </label>
+                                    <small style="color: #888; margin-top: 5px; display: block;">Uncheck to run application without MQTT trigger functionality</small>
+                                </div>
+                                <div id="mqttFieldsContainer">
+                                    <div class="config-field">
+                                        <label for="mqttBroker">MQTT Broker IP</label>
+                                        <input type="text" id="mqttBroker" name="mqttBroker" placeholder="192.168.10.223">
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="mqttPort">MQTT Port</label>
+                                        <input type="number" id="mqttPort" name="mqttPort" placeholder="1883">
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="mqttSubscribe">MQTT Subscribe Topic</label>
+                                        <input type="text" id="mqttSubscribe" name="mqttSubscribe" placeholder="anpr/trigger">
+                                    </div>
+                                    <div class="config-field">
+                                        <label for="mqttPublish">MQTT Publish Topic</label>
+                                        <input type="text" id="mqttPublish" name="mqttPublish" placeholder="anpr/result">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('camera', document.querySelector('[data-section=camera]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button type="button" class="config-next-btn" onclick="switchConfigSection('branding', document.querySelector('[data-section=branding]'))">Next <i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- === HEADER BRANDING SECTION === -->
+                        <div class="config-panel" id="configPanelBranding">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-badge-ad"></i> Header Branding</h3>
+                                <p>Configure the department header title, subtitle, and logo</p>
+                            </div>
+                            <div class="config-section">
+                                <h3><i class="bi bi-badge-ad" style="margin-right: 3px;"></i> Branding Details</h3>
+                                <div class="config-field">
+                                    <label for="deptTitle">Header Title</label>
+                                    <input type="text" id="deptTitle" name="deptTitle" placeholder="e.g. Department of Mines & Geology">
+                                </div>
+                                <div class="config-field">
+                                    <label for="deptSubtitle">Header Subtitle</label>
+                                    <input type="text" id="deptSubtitle" name="deptSubtitle" placeholder="e.g. Government of Rajasthan">
+                                </div>
+                                <div class="config-field">
+                                    <label for="footerDept">Footer Department Text</label>
+                                    <input type="text" id="footerDept" name="footerDept" placeholder="e.g. Department of Mines & Geology, Govt. of Rajasthan">
+                                    <small style="color:#888; display:block; margin-top:6px;">Appears in the bottom footer as: &copy; [your text] 2026. All rights reserved.</small>
+                                </div>
+                                <div class="config-field">
+                                    <label for="deptLogoFile">Upload Header Logo</label>
+                                    <input type="file" id="deptLogoFile" name="deptLogoFile" accept=".png,.jpg,.jpeg,.svg,.ico,.webp">
+                                    <small style="color:#888; display:block; margin-top:6px;">
+                                        Choose a new logo to replace the current header emblem.
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('mqtt', document.querySelector('[data-section=mqtt]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button type="button" class="config-next-btn" onclick="switchConfigSection('database', document.querySelector('[data-section=database]'))">Next <i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- === DATABASE SECTION === -->
+                        <div class="config-panel" id="configPanelDatabase">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-database-gear"></i> Database Configuration</h3>
+                                <p>Configure the database connection settings</p>
+                            </div>
+                            <div class="config-section">
+                                <h3><i class="bi bi-database-gear" style="margin-right: 3px;"></i> Database Settings</h3>
+                                <div class="config-field">
+                                    <label for="dbType">Database Type</label>
+                                    <select id="dbType" name="dbType" style="width: 100%; padding: 9px 11px; background: #ffffff; border: 1px solid #cccccc; border-radius: 7px; color: #333333; font-size: 0.95rem;">
+                                        <option value="MSSQL">SQL Server (MSSQL)</option>
+                                        <option value="MySQL">MySQL</option>
+                                        <option value="PostgreSQL">PostgreSQL</option>
+                                        <option value="MongoDB">MongoDB</option>
+                                    </select>
+                                </div>
+                                <div class="config-field">
+                                    <label for="dbServer">Database Server</label>
+                                    <input type="text" id="dbServer" name="dbServer" placeholder="CSMBHUD203\SQL2022" required>
+                                </div>
+                                <div class="config-field">
+                                    <label for="dbName">Database Name</label>
+                                    <input type="text" id="dbName" name="dbName" placeholder="ANPR_Database" required>
+                                </div>
+                                <div class="config-field">
+                                    <label for="dbUsername">Database Username</label>
+                                    <input type="text" id="dbUsername" name="dbUsername" placeholder="sa" required>
+                                </div>
+                                <div class="config-field">
+                                    <label for="dbPassword">Database Password</label>
+                                    <input type="password" id="dbPassword" name="dbPassword" placeholder="••••••••" required>
+                                </div>
+                                <div style="display: flex; gap: 12px; margin-top: 10px;">
+                                    <button type="button" class="config-save-btn" onclick="checkDatabaseConnection()" id="dbCheckBtn" style="font-size: 13px; padding: 8px 18px;">
+                                        <i class="bi bi-database-check" style="margin-right: 6px;"></i> Check &amp; Save
+                                    </button>
+                                </div>
+                                <div id="dbCheckStatus" style="display:none; margin-top:10px; padding:9px 14px; border-radius:7px; font-size:0.88em; font-weight:500;"></div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('branding', document.querySelector('[data-section=branding]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button type="button" class="config-next-btn" onclick="switchConfigSection('model', document.querySelector('[data-section=model]'))">Next <i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- === MODEL SECTION === -->
+                        <div class="config-panel" id="configPanelModel">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-cpu"></i> Model Configuration</h3>
+                                <p>Upload model files and configure detection parameters</p>
+                            </div>
+                            <!-- Model File Upload -->
+                            <div class="config-section">
+                                <h3><i class="bi bi-cpu" style="margin-right: 3px;"></i> Model File</h3>
+                                <div class="config-field">
+                                    <label for="modelFileInput">Upload Model File (.pt)</label>
+                                    <input type="file" id="modelFileInput" accept=".pt">
+                                    <small style="color:#888; display:block; margin-top:6px;">Upload a new <code>.pt</code> model file (e.g. <em>best.pt</em>, <em>latest_best.pt</em>). Replaces existing file with same name or adds alongside other weights. Re-encrypted automatically.</small>
+                                </div>
+                                <div style="text-align: right; margin-top: 8px;">
+                                    <button type="button" id="modelUploadBtn" class="config-save-btn" onclick="uploadModelFile()">
+                                        <i class="bi bi-upload" style="margin-right: 6px;"></i>Upload &amp; Encrypt
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Regex ON/OFF -->
+                            <div class="config-section">
+                                <h3><i class="bi bi-regex" style="margin-right: 3px;"></i> Regex ON/OFF</h3>
+                                <div class="config-field" style="margin-bottom: 20px;">
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                        <input type="checkbox" id="enableRegexCorrection" name="enableRegexCorrection" style="width: auto; cursor: pointer;">
+                                        <span style="color: #4CAF50; font-weight: 600;">Enable Regex Correction</span>
+                                    </label>
+                                    <small style="color:#888; display:block; margin-top:6px;">When checked: OCR output passes through plate format regex, state code correction and digit/character substitution (e.g. O&rarr;0, I&rarr;1). <br>When unchecked: raw OCR text used as-is after basic alphanumeric stripping — useful when plates don't follow standard Indian format.</small>
+                                </div>
+                            </div>
+                            <!-- Frame Processing -->
+                            <div class="config-section">
+                                <h3><i class="bi bi-skip-forward" style="margin-right: 3px;"></i> Frame Processing</h3>
+                                <div class="config-field">
+                                    <label for="frameSkipInterval">Frame Skip Interval</label>
+                                    <input type="number" id="frameSkipInterval" name="frameSkipInterval" min="1" max="60" placeholder="3" title="Process every Nth frame — higher value = lower CPU usage but slower detection">
+                                    <small style="color:#888; display:block; margin-top:6px;">Process every <strong style="color:#8cc">N</strong>th frame from the video stream. <br>1 = every frame (max accuracy, high CPU). 3 = every 3rd frame (default, balanced). Higher = less CPU but slower plate detection.</small>
+                                </div>
+                            </div>
+                            <!-- Detection Bounding Box -->
+                            <div class="config-section">
+                                <h3><i class="bi bi-bounding-box" style="margin-right: 3px;"></i> Detection Bounding Box</h3>
+                                <div class="config-field">
+                                    <label for="boxPaddingWidthPx">Padding width (pixels per side)</label>
+                                    <input type="number" id="boxPaddingWidthPx" name="boxPaddingWidthPx" min="0" max="200" placeholder="10" title="Pixels to add on left and right of detected plate before OCR">
+                                    <small style="color:#888; display:block; margin-top:6px;">Increase if digits are cut on tilted plates. Added on left and right.</small>
+                                </div>
+                                <div class="config-field">
+                                    <label for="boxPaddingHeightPx">Padding height (pixels per side)</label>
+                                    <input type="number" id="boxPaddingHeightPx" name="boxPaddingHeightPx" min="0" max="200" placeholder="10" title="Pixels to add on top and bottom of detected plate before OCR">
+                                    <small style="color:#888; display:block; margin-top:6px;">Increase if digits are cut on top or bottom. Added on top and bottom.</small>
+                                </div>
+                            </div>
+                            <!-- Confidence Thresholds -->
+                            <div class="config-section">
+                                <h3><i class="bi bi-sliders" style="margin-right: 3px;"></i> Confidence Thresholds</h3>
+                                <div class="config-field">
+                                    <label for="confThresh640">640 Inference Confidence (default: 0.85)</label>
+                                    <input type="number" id="confThresh640" name="confThresh640" min="0.01" max="1.00" step="0.01" placeholder="0.85" title="Minimum YOLO confidence for 640-inference detections">
+                                    <small style="color:#888; display:block; margin-top:6px;">Detections below this score are ignored during fast 640-pass inference. Higher = fewer false positives, lower = more sensitive.</small>
+                                </div>
+                                <div class="config-field">
+                                    <label for="confThresh1280">1280 Inference Confidence (default: 0.75)</label>
+                                    <input type="number" id="confThresh1280" name="confThresh1280" min="0.01" max="1.00" step="0.01" placeholder="0.75" title="Minimum YOLO confidence for 1280-inference detections">
+                                    <small style="color:#888; display:block; margin-top:6px;">Fallback 1280-pass threshold (runs only when 640-pass OCR is incomplete). Can be slightly lower to catch difficult plates.</small>
+                                </div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('database', document.querySelector('[data-section=database]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button type="button" class="config-next-btn" onclick="switchConfigSection('settings', document.querySelector('[data-section=settings]'))">Next <i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- === SETTINGS SECTION === -->
+                        <div class="config-panel" id="configPanelSettings">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-shield-lock"></i> Settings</h3>
+                            </div>
+                            <div class="config-section">
+                                <h3><i class="bi bi-key" style="margin-right: 3px;"></i> Update Password</h3>
+                                <div class="config-field">
+                                    <label for="newPassword">New Password</label>
+                                    <input type="password" id="newPassword" placeholder="Enter new password">
+                                </div>
+                                <div class="config-field">
+                                    <label for="confirmPassword">Confirm Password</label>
+                                    <input type="password" id="confirmPassword" placeholder="Re-enter new password">
+                                </div>
+                                <div style="display: flex; gap: 12px; margin-top: 10px;">
+                                    <button type="button" class="config-save-btn" onclick="updatePassword()" id="updatePasswordBtn" style="font-size: 13px; padding: 8px 18px;">
+                                        <i class="bi bi-shield-check" style="margin-right: 6px;"></i> Update Password
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="config-section" style="margin-top:18px;">
+                                <h3><i class="bi bi-lightning-charge" style="margin-right: 3px;"></i> Auto Login</h3>
+                                <div class="config-field" style="margin-bottom: 10px;">
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                        <input type="checkbox" id="autoLoginToggle" name="autoLoginToggle" style="width: auto; cursor: pointer;">
+                                        <span style="color: #1797A1; font-weight: 600;">Enable Auto Login on Startup</span>
+                                    </label>
+                                    <small style="color: #888; margin-top: 5px; display: block;">When enabled, the login page will automatically sign in using remembered credentials — no password prompt.</small>
+                                </div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('model', document.querySelector('[data-section=model]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button type="button" class="config-next-btn" onclick="switchConfigSection('report', document.querySelector('[data-section=report]'))">Next <i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- === REPORT SECTION === -->
+                        <div class="config-panel" id="configPanelReport">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-clipboard-data"></i> Report</h3>
+                            </div>
+                            <div class="config-section">
+                                <h3><i class="bi bi-camera-video" style="margin-right:3px;"></i> Front Camera</h3>
+                                <!-- Scrolling marquee message -->
+                                <div style="background:linear-gradient(90deg,#e8f5e9,#f1f8e9); border:1px solid #a5d6a7; border-radius:7px; padding:7px 0; margin-bottom:12px; overflow:hidden; white-space:nowrap; position:relative;">
+                                    <span style="display:inline-block; color:#c0392b; font-weight:600; font-size:13px; animation:reportMarquee 14s linear infinite; will-change:transform; letter-spacing:0.3px;"><i class="bi bi-car-front" style="margin-right:6px;"></i>Please bring the vehicle near to camera</span>
+                                </div>
+                                <style>
+                                @keyframes reportMarquee {
+                                    0%   { transform: translateX(110%); }
+                                    100% { transform: translateX(-110%); }
+                                }
+                                </style>
+                                <!-- Two-column: video left, OCR result right -->
+                                <div style="display:flex; gap:16px; align-items:center;">
+                                    <!-- Left: camera preview + test button -->
+                                    <div style="flex:1; min-width:0;">
+                                        <div id="reportPreviewBox" style="background:#f8f9fa; border:1px solid #e0e0e0; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative;">
+                                            <div id="reportNoFeedPlaceholder" style="display:flex; flex-direction:column; align-items:center; padding:30px;">
+                                                <i class="bi bi-camera-video-off" style="font-size:48px; color:#ccc; display:block; margin-bottom:8px;"></i>
+                                                <span style="color:#999; font-size:14px;">No feed</span>
+                                            </div>
+                                            <img id="reportPreviewImg" src="" alt="Camera Feed" style="display:none; width:100%; height:auto; max-height:320px; object-fit:contain; border-radius:10px;">
+                                        </div>
+                                        <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                            <button type="button" class="config-save-btn" onclick="reportTest(this)" id="reportTestBtn" style="font-size:13px; padding:8px 18px; background:#2e7d32 !important; border-color:#2e7d32 !important; box-shadow:0 4px 14px rgba(46,125,50,0.35) !important;">
+                                                <i class="bi bi-play-circle" style="margin-right:6px;"></i> Test
+                                            </button>
+                                            <button type="button" id="reportDownloadBtn" onclick="downloadAnprPdf()" style="display:none; font-size:13px; padding:8px 18px; border:none; border-radius:7px; cursor:pointer; font-weight:600; background:#1565c0; color:#fff; box-shadow:0 4px 14px rgba(21,101,192,0.35); transition:all 0.2s;">
+                                                <i class="bi bi-file-earmark-arrow-down" style="margin-right:6px;"></i> Download PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <!-- Right: OCR result -->
+                                    <div id="reportResultBox" style="display:none; flex:0 0 220px; background:#f8faff; border:1px solid #b0bec5; border-radius:9px; padding:16px 18px; align-self:flex-start; box-sizing:border-box; flex-direction:column; gap:0;">
+                                        <div style="font-size:11px; color:#555; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; border-bottom:1px solid #dce5ec; padding-bottom:8px; margin-bottom:12px;">OCR Result</div>
+                                        <div id="reportPlateText" style="font-size:24px; font-weight:700; color:#111; letter-spacing:3px; font-family:monospace; word-break:break-all; line-height:1.2; margin-bottom:12px;"></div>
+                                        <div id="reportConfidence" style="display:inline-block; font-size:12px; font-weight:700; color:#fff; background:#1565c0; border-radius:20px; padding:3px 10px; letter-spacing:0.3px; width:fit-content; margin-bottom:14px;"></div>
+                                        <img id="reportPlateImg" src="" alt="Plate" style="display:none; max-width:100%; max-height:80px; border-radius:5px; border:1px solid #ccc; object-fit:contain;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('settings', document.querySelector('[data-section=settings]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button type="button" class="config-next-btn" onclick="switchConfigSection('imageanalysis', document.querySelector('[data-section=imageanalysis]'))">Next <i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- === IMAGE ANALYSIS SECTION === -->
+                        <div class="config-panel" id="configPanelImageanalysis">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-search"></i> Image Analysis</h3>
+                                <p class="config-panel-subtitle">Upload a vehicle image to extract number plate via OCR.</p>
+                            </div>
+                            <div class="config-section">
+                                <!-- Drop zone -->
+                                <div class="ia-drop-zone" id="iaDropZone"
+                                     ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                                     ondragleave="this.classList.remove('drag-over')"
+                                     ondrop="iaHandleDrop(event)">
+                                    <i class="bi bi-image ia-drop-icon"></i>
+                                    <p class="ia-drop-text">Drag &amp; drop an image here</p>
+                                    <p class="ia-drop-sub">or</p>
+                                    <label class="ia-choose-btn">
+                                        <i class="bi bi-folder2-open"></i> Choose File
+                                        <input type="file" id="iaFileInput" accept=".jpg,.jpeg,.png,.bmp,.webp" style="display:none" onchange="iaHandleFile(this.files[0])">
+                                    </label>
+                                    <p class="ia-drop-hint">JPG, PNG, BMP, WEBP</p>
+                                </div>
+                                <!-- Preview & OCR result -->
+                                <div id="iaPreviewArea" style="display:none; margin-top:10px;">
+                                    <div class="ia-preview-row">
+                                        <div class="ia-img-wrap">
+                                            <img id="iaPreviewImg" class="ia-preview-img" src="" alt="Preview">
+                                            <span class="ia-img-badge">Vehicle</span>
+                                        </div>
+                                        <div id="iaPlateImgBox" class="ia-plate-img-box" style="display:none">
+                                            <img id="iaPlateImgLarge" class="ia-plate-img-large ia-plate-img-large--clickable" src="" alt="Plate" onclick="iaOpenLightbox(this)" title="Click to enlarge">
+                                            <span class="ia-img-badge">Plate &bull; zoom</span>
+                                        </div>
+                                        <div id="iaResultBox" class="ia-result-box">
+                                            <div id="iaResultLoading" class="ia-result-loading" style="display:none"><span class="ia-spinner"></span> Processing…</div>
+                                            <div id="iaOcrCard" class="ia-result-text" style="display:none">
+                                                <div class="ia-result-label">Detected Plate</div>
+                                                <div class="ia-result-plate" id="iaOcrPlate"></div>
+                                                <div class="ia-result-conf" id="iaOcrConf"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="ia-action-row">
+                                        <button type="button" class="ia-analyse-btn" id="iaAnalyseBtn" onclick="iaRunOCR()"><i class="bi bi-cpu"></i> Analyse</button>
+                                        <button type="button" class="ia-reset-btn" onclick="iaReset()"><i class="bi bi-x-circle"></i> Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('report', document.querySelector('[data-section=report]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- Image Analysis lightbox — inside config-modal-content for correct absolute positioning -->
+            <div id="iaLightbox" class="ia-lightbox" style="display:none" onclick="iaCloseLightbox()">
+                <div class="ia-lightbox-box" onclick="event.stopPropagation()">
+                    <button class="ia-lightbox-close" onclick="iaCloseLightbox()">&times;</button>
+                    <img id="iaLightboxImg" src="" alt="Plate" class="ia-lightbox-img">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- Left Panel - two stacked cards -->
+        <div class="left-panel">
+
+            <!-- Card 1: Live Stream -->
+            <div class="stream-card">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; margin-bottom:4px;">
+                    <h1 style="margin:0; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"> ANPR Live Stream</h1>
+                    <div class="location-name" id="locationNameDisplay" style="flex-shrink:1; font-weight:600; font-size:0.82em; color:#1a237e; background:#e8eaf6; padding:3px 10px; border-radius:5px; border:1px solid #c5cae9; white-space:nowrap; max-width:45%; overflow:hidden; text-overflow:ellipsis;">Location:&nbsp;<span id="locationNameText">{{ location_name }}</span></div>
+                </div>
+                <div class="stream-container">
+                    <img id="stream" src="/video_feed" alt="Live Stream">
+                </div>
+            </div><!-- /stream-card -->
+
+            <!-- Card 2: Latest Detection -->
+            <div class="detection-card" id="latestDetection">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>Latest Detection</h1>
+                    <button class="test-btn" id="mainTestBtn" onclick="testNumberPlate(this)" style="margin-right: 20px; background-color: #e53935 !important; border-color: #e53935 !important; cursor: not-allowed; position:relative;" disabled>
+                        <i class="bi bi-play-circle" style="margin-right: 8px;"></i> Test
+                        <div id="testBtnTooltip" class="custom-tooltip">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            System initialising&hellip; please wait
+                        </div>
+                    </button>
+                </div>
+                <div class="detection-content-wrapper">
+                    <div id="detectionContent" class="no-detection">Waiting for first detection...</div>
+                </div>
+            </div><!-- /detection-card -->
+
+        </div><!-- /left-panel -->
+
+        <!-- Right Panel - Records Table -->
+        <div class="right-panel">
+            <!-- Search / Filter bar -->
+            <div class="search-bar-card">
+                <!-- Row 1: search + filter + count + refresh -->
+                <div class="search-bar-top">
+                    <div class="search-input-wrap">
+                        <i class="bi bi-search search-icon"></i>
+                        <input type="text" id="ocrSearchInput" class="search-input" placeholder="Search vehicle number…" autocomplete="off" oninput="onSearchInput()" onkeydown="if(event.key==='Enter')applySearch()">
+                        <ul id="ocrSuggestions" class="search-suggestions"></ul>
+                    </div>
+                    <!-- Hidden real select for logic compatibility -->
+                    <select id="dateFilterSelect" style="display:none" onchange="onDateFilterChange()">
+                        <option value="all">All time</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="custom">Custom range…</option>
+                    </select>
+                    <div class="cust-select-wrap" id="custSelectWrap">
+                        <button type="button" class="cust-select-btn" id="custSelectBtn" onclick="custSelectToggle()">
+                            <i class="bi bi-calendar3" style="font-size:13px;color:#7c6f60;flex-shrink:0;"></i>
+                            <span id="custSelectLabel">All time</span>
+                            <i class="bi bi-chevron-down cust-select-caret" id="custSelectCaret"></i>
+                        </button>
+                        <div class="cust-select-dropdown" id="custSelectDropdown">
+                            <div class="cust-select-option active" data-value="all" onclick="custSelectPick(this)"><i class="bi bi-clock-history"></i> All time</div>
+                            <div class="cust-select-option" data-value="today" onclick="custSelectPick(this)"><i class="bi bi-sun"></i> Today</div>
+                            <div class="cust-select-option" data-value="yesterday" onclick="custSelectPick(this)"><i class="bi bi-arrow-left-circle"></i> Yesterday</div>
+                            <div class="cust-select-option" data-value="7d" onclick="custSelectPick(this)"><i class="bi bi-calendar-week"></i> Last 7 days</div>
+                            <div class="cust-select-option" data-value="30d" onclick="custSelectPick(this)"><i class="bi bi-calendar-month"></i> Last 30 days</div>
+                            <div class="cust-select-option cust-select-option--custom" data-value="custom" onclick="custSelectPick(this)"><i class="bi bi-sliders"></i> Custom range…</div>
+                        </div>
+                    </div>
+                    <div class="search-bar-right">
+                        <span class="record-count" id="recordCount">Loading...</span>
+                        <button type="button" class="refresh-btn" id="refreshRecordsBtn"><i class="bi bi-arrow-counterclockwise"></i> Refresh</button>
+                    </div>
+                </div>
+                <!-- Row 2: custom date range (only when custom is selected) -->
+                <div id="customRangeRow" class="custom-range-inline" style="display:none">
+                    <!-- From picker -->
+                    <div class="dr-wrap" id="drFromWrap">
+                        <button type="button" class="dr-pill" id="drFromPill" onclick="drToggle('from')">
+                            <i class="bi bi-calendar3"></i>
+                            <span id="drFromLabel">From…</span>
+                            <i class="bi bi-chevron-down dr-caret"></i>
+                        </button>
+                        <div class="dr-panel" id="drFromPanel" style="display:none">
+                            <div class="dr-panel-title">From</div>
+                            <div class="dr-field-row">
+                                <span class="dr-field-lbl">Date</span>
+                                <input type="date" id="drFromDate" class="dr-date-input" onchange="drSync('from')">
+                            </div>
+                            <div class="dr-field-row">
+                                <span class="dr-field-lbl">Time</span>
+                                <div class="dr-time-row">
+                                    <select id="drFromHr" class="dr-time-sel" onchange="drSync('from')"></select>
+                                    <span class="dr-colon">:</span>
+                                    <select id="drFromMn" class="dr-time-sel" onchange="drSync('from')"></select>
+                                    <button type="button" class="dr-ampm-badge dr-ampm-badge--am" id="drFromAmPm" onclick="drToggleAmPm('from')">AM</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="range-sep">→</span>
+                    <!-- To picker -->
+                    <div class="dr-wrap" id="drToWrap">
+                        <button type="button" class="dr-pill" id="drToPill" onclick="drToggle('to')">
+                            <i class="bi bi-calendar3"></i>
+                            <span id="drToLabel">To…</span>
+                            <i class="bi bi-chevron-down dr-caret"></i>
+                        </button>
+                        <div class="dr-panel" id="drToPanel" style="display:none">
+                            <div class="dr-panel-title">To</div>
+                            <div class="dr-field-row">
+                                <span class="dr-field-lbl">Date</span>
+                                <input type="date" id="drToDate" class="dr-date-input" onchange="drSync('to')">
+                            </div>
+                            <div class="dr-field-row">
+                                <span class="dr-field-lbl">Time</span>
+                                <div class="dr-time-row">
+                                    <select id="drToHr" class="dr-time-sel" onchange="drSync('to')"></select>
+                                    <span class="dr-colon">:</span>
+                                    <select id="drToMn" class="dr-time-sel" onchange="drSync('to')"></select>
+                                    <button type="button" class="dr-ampm-badge dr-ampm-badge--pm" id="drToAmPm" onclick="drToggleAmPm('to')">PM</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden inputs -->
+                    <input type="hidden" id="customFrom">
+                    <input type="hidden" id="customTo">
+                    <button type="button" class="search-clear-btn" id="searchClearBtn" onclick="clearSearch()" title="Clear filter"><i class="bi bi-x-lg"></i> Clear</button>
+                </div>
+            </div>
+
+
+            <div class="table-wrapper">
+                <table id="recordsTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>OCR Value</th>
+                            <th>Confidence Score</th>
+                            <th>Image</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="4" class="loading">Loading records...</td></tr>
+                    </tbody>
+                </table>
+            </div><!-- /table-wrapper -->
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="prevBtn" onclick="previousPage()" disabled><i class="bi bi-chevron-left"></i></button>
+                    <span class="pagination-info">
+                        <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    </span>
+                    <button class="pagination-btn" id="nextBtn" onclick="nextPage()" disabled><i class="bi bi-chevron-right"></i></button>
+                </div>
+        <!-- Image Modal - centered over OCR Recognition Records -->
+        <div id="imageModal" class="modal" onclick="closeImageModal()">
+            <div class="modal-blur-bg"></div>
+            <div class="modal-box" onclick="event.stopPropagation()">
+                <button class="modal-close-btn" onclick="closeImageModal()">&times;</button>
+                <img class="modal-content" id="modalImage" src="" alt="Number Plate">
+            </div>
+        </div>
+        </div><!-- /right-panel -->
+    </div><!-- /container -->
+    
+    <div class="footer">
+        <span id="footerText">© {{ footer_dept }} 2026. All rights reserved.</span>
+    </div>
+
+    
+    <script>
+            // PDF report state — one-time generation after first successful report test + save
+            window._reportPdfData = null;       // holds OCR+image data captured during reportTest()
+            window._reportPdfGenerated = false; // becomes true after PDF is saved; never resets this session
+
+            // Detect embedded (PyQt) rendering and add class for CSS adjustments
+            (function(){
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('embedded') === '1' || navigator.userAgent.includes('QtWebEngine')) {
+                    document.body.classList.add('embedded');
+                }
+            })();
+        // Pagination variables
+        let currentPage = 1;
+        let recordsPerPage = 7;
+        let allRecords = [];
+        let filteredRecords = [];    // subset after search/date filter
+        let lastValidRecord = null;  // Preserve last real detection so we never show N/A or 0 below latest
+        let _lastTableKey = '';      // Fingerprint of last rendered table — skip re-render if unchanged
+        let _initialLoadDone = false; // Track whether first loadRecords() has completed
+        let _lastNoDetectionPopupAt = 0; // Cooldown: don't spam popup more than once per 7s
+        let _loadInFlight = false; // Guard: prevents poller triggering duplicate refresh
+
+        // ── Search / filter helpers ──────────────────────────────────────────
+        function getDateBounds(val) {
+            var now = new Date(), start, end;
+            if (val === 'today') {
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                end   = new Date(start.getTime() + 86400000);
+            } else if (val === 'yesterday') {
+                end   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                start = new Date(end.getTime() - 86400000);
+            } else if (val === '7d') {
+                start = new Date(now.getTime() - 7*86400000);
+                end   = new Date(now.getTime() + 1000);
+            } else if (val === '30d') {
+                start = new Date(now.getTime() - 30*86400000);
+                end   = new Date(now.getTime() + 1000);
+            } else if (val === 'custom') {
+                var fromVal = document.getElementById('customFrom').value;
+                var toVal   = document.getElementById('customTo').value;
+                if (!fromVal && !toVal) return null;
+                start = fromVal ? new Date(fromVal) : new Date(0);
+                end   = toVal   ? new Date(new Date(toVal).getTime() + 60000) : new Date(now.getTime() + 1000);
+            } else {
+                return null; // all time
+            }
+            return { start, end };
+        }
+
+        // ── Custom styled select dropdown ─────────────────────────────────
+        function custSelectToggle() {
+            var dd = document.getElementById('custSelectDropdown');
+            var caret = document.getElementById('custSelectCaret');
+            var btn = document.getElementById('custSelectBtn');
+            var open = dd.classList.contains('open');
+            dd.classList.toggle('open', !open);
+            caret.style.transform = open ? '' : 'rotate(180deg)';
+            btn.classList.toggle('open', !open);
+        }
+        function custSelectPick(el) {
+            var val = el.dataset.value;
+            var labels = {'all':'All time','today':'Today','yesterday':'Yesterday','7d':'Last 7 days','30d':'Last 30 days','custom':'Custom range…'};
+            document.getElementById('custSelectLabel').textContent = labels[val] || val;
+            document.querySelectorAll('.cust-select-option').forEach(function(o){ o.classList.remove('active'); });
+            el.classList.add('active');
+            document.getElementById('custSelectDropdown').classList.remove('open');
+            document.getElementById('custSelectCaret').style.transform = '';
+            document.getElementById('custSelectBtn').classList.remove('open');
+            var sel = document.getElementById('dateFilterSelect');
+            sel.value = val;
+            sel.dispatchEvent(new Event('change'));
+        }
+        document.addEventListener('click', function(e){
+            var wrap = document.getElementById('custSelectWrap');
+            if (wrap && !wrap.contains(e.target)) {
+                document.getElementById('custSelectDropdown').classList.remove('open');
+                document.getElementById('custSelectCaret').style.transform = '';
+                document.getElementById('custSelectBtn').classList.remove('open');
+            }
+        });
+
+        function onDateFilterChange() {
+            var val = document.getElementById('dateFilterSelect').value;
+            var row = document.getElementById('customRangeRow');
+            if (row) {
+                if (val === 'custom') {
+                    row.style.display = 'flex';
+                    if (!document.getElementById('customFrom').value) drPreFill();
+                } else {
+                    row.style.display = 'none';
+                    drClosePanels();
+                }
+            }
+            applySearch();
+        }
+
+        function applySearch() {
+            var q   = (document.getElementById('ocrSearchInput').value || '').trim().toUpperCase();
+            var dv  = document.getElementById('dateFilterSelect').value;
+            var bounds = getDateBounds(dv);
+            var clearBtn = document.getElementById('searchClearBtn');
+
+            filteredRecords = allRecords.filter(function(r) {
+                if (q) {
+                    var text = (r.CorrectedText || '').toUpperCase();
+                    if (!text.includes(q)) return false;
+                }
+                if (bounds) {
+                    var ts = new Date(r.Timestamp);
+                    if (ts < bounds.start || ts >= bounds.end) return false;
+                }
+                return true;
+            });
+
+            // clear btn lives in the custom row — always visible when custom row is shown
+            // for search-only filtering, show it inline next to the search input via a separate mechanism
+            var rc = document.getElementById('recordCount');
+            if (rc) {
+                var countToShow = filteredRecords.length;
+                if (!q && dv === 'all') countToShow = allRecords.length;
+                rc.textContent = countToShow + ' total records';
+            }
+
+            currentPage = 1;
+            _lastTableKey = '';
+            displayPage(1);
+        }
+
+        function clearSearch() {
+            document.getElementById('ocrSearchInput').value = '';
+            document.getElementById('dateFilterSelect').value = 'all';
+            var row = document.getElementById('customRangeRow');
+            if (row) row.style.display = 'none';
+            drReset();
+            hideSuggestions();
+            applySearch();
+        }
+
+        /* ── Date-range picker ───────────────────────────── */
+        function drToggle(which) {
+            var fp = document.getElementById('drFromPanel');
+            var tp = document.getElementById('drToPanel');
+            if (which === 'from') {
+                fp.style.display = (fp.style.display === 'none') ? '' : 'none';
+                tp.style.display = 'none';
+            } else {
+                tp.style.display = (tp.style.display === 'none') ? '' : 'none';
+                fp.style.display = 'none';
+            }
+        }
+        function drClosePanels() {
+            ['drFromPanel','drToPanel'].forEach(function(id) {
+                var el = document.getElementById(id); if (el) el.style.display = 'none';
+            });
+        }
+        /* ── build hour/minute selects on load ─────────── */
+        (function drBuildSelects() {
+            ['From','To'].forEach(function(W) {
+                var hs = document.getElementById('dr'+W+'Hr');
+                var ms = document.getElementById('dr'+W+'Mn');
+                for (var h=1; h<=12; h++) { var o=document.createElement('option'); o.value=String(h); o.textContent=String(h); hs.appendChild(o); }
+                for (var m=0; m<60; m++) { var o=document.createElement('option'); o.value=String(m).padStart(2,'0'); o.textContent=String(m).padStart(2,'0'); ms.appendChild(o); }
+            });
+            /* default From = 12:00 AM, To = 11:59 PM */
+            document.getElementById('drFromHr').value = '12';
+            document.getElementById('drFromMn').value = '00';
+            document.getElementById('drToHr').value   = '11';
+            document.getElementById('drToMn').value   = '59';
+        })();
+
+        function drToggleAmPm(which) {
+            var W      = which === 'from' ? 'From' : 'To';
+            var badge  = document.getElementById('dr'+W+'AmPm');
+            var cur    = badge.textContent.trim();
+            var newVal = cur === 'AM' ? 'PM' : 'AM';
+            badge.textContent = newVal;
+            badge.className   = 'dr-ampm-badge dr-ampm-badge--' + newVal.toLowerCase();
+            drSync(which);
+        }
+        function drSync(which) {
+            var W      = which === 'from' ? 'From' : 'To';
+            var d      = document.getElementById('dr'+W+'Date').value;
+            var hr12   = parseInt(document.getElementById('dr'+W+'Hr').value) || 12;
+            var mn     = document.getElementById('dr'+W+'Mn').value || '00';
+            var ampm   = document.getElementById('dr'+W+'AmPm').textContent.trim();
+            var hid    = document.getElementById('custom'+W);
+            var lbl    = document.getElementById('dr'+W+'Label');
+            var badge  = document.getElementById('dr'+W+'AmPm');
+            badge.className = 'dr-ampm-badge dr-ampm-badge--' + ampm.toLowerCase();
+            /* convert to 24h for hidden input */
+            var hr24 = hr12 % 12 + (ampm === 'PM' ? 12 : 0);
+            var t24  = String(hr24).padStart(2,'0') + ':' + mn;
+            if (d) {
+                hid.value = d + 'T' + t24;
+                var p  = d.split('-');
+                var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                lbl.textContent = parseInt(p[2]) + ' ' + mo[parseInt(p[1])-1] + ', ' + hr12 + ':' + mn + ' ' + ampm;
+            } else {
+                hid.value = '';
+                lbl.textContent = which === 'from' ? 'From…' : 'To…';
+            }
+            applySearch();
+        }
+        function drPreFill() {
+            var now  = new Date();
+            var pad  = function(n){ return String(n).padStart(2,'0'); };
+            var today = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+            /* From = today 12:00 AM */
+            document.getElementById('drFromDate').value = today;
+            document.getElementById('drFromHr').value   = '12';
+            document.getElementById('drFromMn').value   = '00';
+            document.getElementById('drFromAmPm').textContent = 'AM';
+            document.getElementById('drFromAmPm').className   = 'dr-ampm-badge dr-ampm-badge--am';
+            drSync('from');
+            /* To = today current time */
+            var h = now.getHours(), m = now.getMinutes();
+            var ap = h >= 12 ? 'PM' : 'AM';
+            var h12 = h % 12 || 12;
+            document.getElementById('drToDate').value = today;
+            document.getElementById('drToHr').value   = String(h12);
+            document.getElementById('drToMn').value   = pad(m);
+            document.getElementById('drToAmPm').textContent = ap;
+            document.getElementById('drToAmPm').className   = 'dr-ampm-badge dr-ampm-badge--' + ap.toLowerCase();
+            drSync('to');
+        }
+        function drReset() {
+            document.getElementById('drFromDate').value = '';
+            document.getElementById('drFromHr').value   = '12';
+            document.getElementById('drFromMn').value   = '00';
+            document.getElementById('drFromAmPm').textContent = 'AM';
+            document.getElementById('drFromAmPm').className   = 'dr-ampm-badge dr-ampm-badge--am';
+            document.getElementById('drToDate').value = '';
+            document.getElementById('drToHr').value   = '11';
+            document.getElementById('drToMn').value   = '59';
+            document.getElementById('drToAmPm').textContent = 'PM';
+            document.getElementById('drToAmPm').className   = 'dr-ampm-badge dr-ampm-badge--pm';
+            var lf = document.getElementById('drFromLabel'); if (lf) lf.textContent = 'From…';
+            var lt = document.getElementById('drToLabel');   if (lt) lt.textContent = 'To…';
+            var cf = document.getElementById('customFrom');  if (cf) cf.value = '';
+            var ct = document.getElementById('customTo');    if (ct) ct.value = '';
+            drClosePanels();
+        }
+        document.addEventListener('click', function(e) {
+            var row = document.getElementById('customRangeRow');
+            if (!row || row.style.display === 'none') return;
+            ['From','To'].forEach(function(W) {
+                var wrap  = document.getElementById('dr'+W+'Wrap');
+                var panel = document.getElementById('dr'+W+'Panel');
+                if (wrap && panel && panel.style.display !== 'none' && !wrap.contains(e.target))
+                    panel.style.display = 'none';
+            });
+        });
+
+        function onSearchInput() {
+            var q = (document.getElementById('ocrSearchInput').value || '').trim().toUpperCase();
+            if (!q) { hideSuggestions(); applySearch(); return; }
+            // Collect unique matching plate texts
+            var seen = {}, suggestions = [];
+            allRecords.forEach(function(r) {
+                var t = (r.CorrectedText || '').toUpperCase();
+                if (t && t.includes(q) && !seen[t]) { seen[t] = 1; suggestions.push(r.CorrectedText); }
+            });
+            showSuggestions(suggestions.slice(0, 8));
+            applySearch();
+        }
+
+        function showSuggestions(list) {
+            var ul = document.getElementById('ocrSuggestions');
+            if (!ul) return;
+            if (!list.length) { hideSuggestions(); return; }
+            ul.innerHTML = list.map(function(s) {
+                return '<li onclick="selectSuggestion(' + JSON.stringify(s) + ')">' + s + '</li>';
+            }).join('');
+            ul.style.display = 'block';
+        }
+
+        function hideSuggestions() {
+            var ul = document.getElementById('ocrSuggestions');
+            if (ul) ul.style.display = 'none';
+        }
+
+        function selectSuggestion(val) {
+            document.getElementById('ocrSearchInput').value = val;
+            hideSuggestions();
+            applySearch();
+        }
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            var wrap = document.querySelector('.search-input-wrap');
+            if (wrap && !wrap.contains(e.target)) hideSuggestions();
+        });
+
+        // Fits exactly 7 rows inside the table-wrapper height, regardless of screen resolution or DPI scaling
+        function fitTableRows() {
+            var wrapper = document.querySelector('.table-wrapper');
+            var thead = document.querySelector('#recordsTable thead');
+            if (!wrapper || !thead) return;
+            var availH = wrapper.clientHeight - thead.offsetHeight;
+            if (availH <= 0) return;
+            var rowH = Math.max(32, Math.floor(availH / 7));
+            var tdPadV = Math.max(3, Math.floor(rowH * 0.09));
+            var imgH = Math.max(24, rowH - 2 * tdPadV - 4);
+            var tbl = document.getElementById('recordsTable');
+            if (!tbl) return;
+            tbl.style.setProperty('--fit-td-pad', tdPadV + 'px');
+            tbl.style.setProperty('--fit-img-h', imgH + 'px');
+            document.querySelectorAll('#recordsTable tbody tr').forEach(function(tr) {
+                if (!tr.querySelector('td.no-records') && !tr.querySelector('td.loading')) {
+                    tr.style.height = rowH + 'px';
+                }
+            });
+        }
+
+        // Records per page is always 7
+        function calcRecordsPerPage() {
+            recordsPerPage = 7;
+            var tbl = document.getElementById('recordsTable');
+            if (tbl) tbl.style.setProperty('--rpp', 7);
+            fitTableRows();
+        }
+
+        // Recalculate on window resize
+        window.addEventListener('resize', calcRecordsPerPage);
+        // Initial calculation after layout settles
+        window.addEventListener('load', () => setTimeout(calcRecordsPerPage, 200));
+        // Keep rows fitted when the wrapper resizes independently of the window (e.g. DPI scaling, panel reflow)
+        (function() {
+            if (!window.ResizeObserver) return;
+            var _w = document.querySelector('.table-wrapper');
+            if (_w) new ResizeObserver(fitTableRows).observe(_w);
+        })();
+        
+        function isValidDetection(record) {
+            if (!record) return false;
+            const text = (record.CorrectedText || '').trim();
+            if (!text || text === 'NO_DETECTION') return false;
+            return (record.Confidence > 0) || (record.ImageFileName && record.ImageFileName.length > 0);
+        }
+        
+        // Load records from API with visual feedback
+        async function loadRecords() {
+            if (_loadInFlight) return; // already running — skip duplicate call
+            _loadInFlight = true;
+            const refreshBtn = document.getElementById('refreshRecordsBtn');
+            const btnIcon = refreshBtn ? refreshBtn.querySelector('i') : null;
+            const btnText = refreshBtn ? refreshBtn.childNodes[1] : null; // Text node after icon
+            
+            if (refreshBtn) {
+                // Show "Refreshing..." with spinning icon
+                refreshBtn.disabled = true;
+                if (btnIcon) btnIcon.style.animation = 'spin 0.5s linear infinite';
+                if (btnText) btnText.textContent = ' Refreshing...';
+            }
+            
+            try {
+                const response = await fetch('/api/records?limit=100');
+                const data = await response.json();
+                
+                const recordCount = document.getElementById('recordCount');
+                
+                if (data.records && data.records.length > 0) {
+                    allRecords = data.records;
+                    _lastTableKey = ''; // new dataset — force re-render on next displayPage call
+                    // Sync poller timestamp so an immediately-following poll doesn't trigger a second refresh
+                    _lastKnownTs = data.records[0].Timestamp || _lastKnownTs;
+
+                    // Update latest detection only with a valid record; otherwise preserve last detected
+                    const firstValid = data.records.find(r => isValidDetection(r));
+                    if (firstValid) {
+                        lastValidRecord = firstValid;
+                        updateLatestDetection(firstValid);
+                    } else if (lastValidRecord) {
+                        updateLatestDetection(lastValidRecord);
+                    }
+                    // Show popup when the latest record is NO_DETECTION (only after initial load)
+                    // Use cooldown to avoid spamming during rapid polling
+                    if (_initialLoadDone && !isValidDetection(data.records[0])) {
+                        const _now = Date.now();
+                        if (_now - _lastNoDetectionPopupAt > 7000) {
+                            _lastNoDetectionPopupAt = _now;
+                            setTimeout(function() {
+                                showCustomPopup('No number plate detected.', null, 'error');
+                            }, 300);
+                        }
+                    }
+
+                    // Re-apply current search/date filter (updates filteredRecords + count + table)
+                    applySearch();
+                } else {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="no-records">No records found</td></tr>';
+                    filteredRecords = [];
+                    var rc2 = document.getElementById('recordCount');
+                    if (rc2) rc2.textContent = '0 records';
+                    updatePaginationControls(0);
+                    // Preserve latest detection panel: keep showing lastValidRecord if we have one
+                    if (lastValidRecord) updateLatestDetection(lastValidRecord);
+                    // No records at all — show popup only after initial load (not on first page load)
+                    if (_initialLoadDone) {
+                        const _now2 = Date.now();
+                        if (_now2 - _lastNoDetectionPopupAt > 7000) {
+                            _lastNoDetectionPopupAt = _now2;
+                            setTimeout(function() {
+                                showCustomPopup('No number plate detected.', null, 'error');
+                            }, 300);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading records:', error);
+                document.getElementById('tableBody').innerHTML =
+                    '<tr><td colspan="5" class="no-records">No records found</td></tr>';
+                var rc = document.getElementById('recordCount');
+                if (rc) rc.textContent = 'No records';
+                updatePaginationControls(0);
+            } finally {
+                _initialLoadDone = true;
+                _loadInFlight = false;
+                calcRecordsPerPage(); // recalculate rows that fit after layout is complete
+                // Reset refresh button to normal state
+                const refreshBtn = document.getElementById('refreshRecordsBtn');
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    const icon = refreshBtn.querySelector('i');
+                    if (icon) icon.style.animation = '';
+                    const btnText = refreshBtn.childNodes[1];
+                    if (btnText) btnText.textContent = ' Refresh';
+                }
+            }
+        }
+        
+        // Display specific page (always operates on filteredRecords)
+        function displayPage(pageNum) {
+            currentPage = pageNum;
+            const startIndex = (pageNum - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const pageRecords = filteredRecords.slice(startIndex, endIndex);
+
+            // Skip DOM rebuild if this exact page+data was already rendered.
+            // Prevents the browser re-validating every <img> on each poll tick.
+            const newKey = pageNum + '|' + pageRecords.map(r => r.ImageFileName + '~' + r.Timestamp).join(',');
+            if (newKey === _lastTableKey) {
+                updatePaginationControls(filteredRecords.length);
+                return;
+            }
+            _lastTableKey = newKey;
+
+            const tbody = document.getElementById('tableBody');
+            
+            if (pageRecords.length > 0) {
+                var rows = pageRecords.map((record, _idx) => {
+                        const confPct = (record.Confidence || 0) * 100;
+                        const confPctClass = confPct >= 85 ? 'score-high' : 'score-low';
+
+                        // Only show image if a plate is detected
+                        let imageHtml = '';
+                        if (record.CorrectedText && record.ImageFileName) {
+                            const _imgTs = record.Timestamp ? new Date(record.Timestamp).getTime() : Date.now();
+                            imageHtml = `<img src="/api/image/${record.ImageFileName}?t=${_imgTs}" 
+                                    class="plate-image"
+                                    loading="lazy"
+                                    onclick="openImageModal(this); event.stopPropagation();"
+                                    alt="Plate">`;
+                        } else {
+                            imageHtml = '<span style="color:#666;">No image</span>';
+                        }
+
+                        const d = new Date(record.Timestamp);
+                        const datePart = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                        return `
+                            <tr>
+                                <td>
+                                    <div class="cell-date">${datePart}</div>
+                                    <div class="cell-time">${timePart}</div>
+                                </td>
+                                <td>
+                                    <div class="ocr-cell">
+                                        <div class="ocr-plate">${record.CorrectedText || '-'}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="score-badge ${confPctClass}">${(record.Confidence * 100).toFixed(1)}%</span>
+                                </td>
+                                <td>${imageHtml}</td>
+                            </tr>
+                        `;
+                }).join('');
+                // Pad with spacer rows so stretch-height CSS always divides correctly
+                var spacersNeeded = recordsPerPage - pageRecords.length;
+                for (var _s = 0; _s < spacersNeeded; _s++) {
+                    rows += '<tr class="spacer-row"><td colspan="4"></td></tr>';
+                }
+                tbody.innerHTML = rows;
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-records">No records found</td></tr>';
+            }
+            
+            updatePaginationControls(filteredRecords.length);
+            fitTableRows();
+        }
+        function updatePaginationControls(totalRecords) {
+            const totalPages = Math.max(1, Math.ceil(totalRecords / recordsPerPage));
+
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = totalPages;
+
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage >= totalPages || totalRecords === 0;
+        }
+        
+        // Navigate to previous page
+        function previousPage() {
+            if (currentPage > 1) {
+                displayPage(currentPage - 1);
+            }
+        }
+        
+        // Navigate to next page
+        function nextPage() {
+            const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+            if (currentPage < totalPages) {
+                displayPage(currentPage + 1);
+            }
+        }
+        
+        // Open image lightbox
+        var _modalFallbackTimer = null;
+        function openImageModal(thumb) {
+            var modal    = document.getElementById('imageModal');
+            var modalBox = document.querySelector('#imageModal .modal-box');
+            var img      = document.getElementById('modalImage');
+            img.onload  = null;
+            img.onerror = null;
+            if (_modalFallbackTimer) { clearTimeout(_modalFallbackTimer); _modalFallbackTimer = null; }
+            modalBox.style.opacity = '0';
+            modal.classList.add('active');
+            function showBox() {
+                img.onload  = null;
+                img.onerror = null;
+                if (_modalFallbackTimer) { clearTimeout(_modalFallbackTimer); _modalFallbackTimer = null; }
+                modalBox.style.opacity = '1';
+            }
+            img.onload  = showBox;
+            img.onerror = showBox;
+            _modalFallbackTimer = setTimeout(showBox, 600);
+            img.src = thumb.src;
+        }
+
+        // Close the image lightbox
+        function closeImageModal() {
+            var modal    = document.getElementById('imageModal');
+            var modalBox = document.querySelector('#imageModal .modal-box');
+            var img      = document.getElementById('modalImage');
+            if (_modalFallbackTimer) { clearTimeout(_modalFallbackTimer); _modalFallbackTimer = null; }
+            modal.classList.remove('active');
+            modalBox.style.opacity = '0';
+            img.onload  = null;
+            img.onerror = null;
+            img.src = '';
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { closeImageModal(); iaCloseLightbox(); }
+        });
+
+        // ── Image Analysis (inside Config modal) ────────────────────────────
+        var _iaFile = null;
+
+        function iaOpenLightbox(imgEl) {
+            var modalContent = document.querySelector('.config-modal-content');
+            var contentArea = document.querySelector('.config-content-area');
+            var mRect = modalContent.getBoundingClientRect();
+            var cRect = contentArea.getBoundingClientRect();
+            var lb = document.getElementById('iaLightbox');
+            // position relative to config-modal-content using absolute coords
+            lb.style.left   = (cRect.left - mRect.left) + 'px';
+            lb.style.top    = (cRect.top  - mRect.top)  + 'px';
+            lb.style.width  = cRect.width  + 'px';
+            lb.style.height = cRect.height + 'px';
+            document.getElementById('iaLightboxImg').src = imgEl.src;
+            lb.style.display = 'flex';
+        }
+        function iaCloseLightbox() {
+            var lb = document.getElementById('iaLightbox');
+            lb.style.display = 'none';
+            document.getElementById('iaLightboxImg').src = '';
+        }
+
+        function iaReset() {
+            _iaFile = null;
+            document.getElementById('iaFileInput').value = '';
+            document.getElementById('iaPreviewArea').style.display = 'none';
+            document.getElementById('iaPreviewImg').src = '';
+            document.getElementById('iaPlateImgBox').style.display = 'none';
+            document.getElementById('iaPlateImgLarge').src = '';
+            document.getElementById('iaResultLoading').style.display = 'none';
+            document.getElementById('iaOcrCard').style.display = 'none';
+            document.getElementById('iaOcrPlate').textContent = '';
+            document.getElementById('iaOcrConf').textContent = '';
+        }
+        function iaHandleDrop(e) {
+            e.preventDefault();
+            document.getElementById('iaDropZone').classList.remove('drag-over');
+            var file = e.dataTransfer.files[0];
+            if (file) iaHandleFile(file);
+        }
+        function iaHandleFile(file) {
+            if (!file) return;
+            var allowed = ['image/jpeg','image/png','image/bmp','image/webp'];
+            if (!allowed.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|bmp|webp)$/i)) {
+                alert('Unsupported file type. Use JPG, PNG, BMP or WEBP.');
+                return;
+            }
+            _iaFile = file;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                document.getElementById('iaPreviewImg').src = ev.target.result;
+                document.getElementById('iaPlateImgBox').style.display = 'none';
+                document.getElementById('iaPlateImgLarge').src = '';
+                document.getElementById('iaOcrCard').style.display = 'none';
+                document.getElementById('iaPreviewArea').style.display = '';
+            };
+            reader.readAsDataURL(file);
+        }
+        async function iaRunOCR() {
+            if (!_iaFile) return;
+            var btn = document.getElementById('iaAnalyseBtn');
+            var loadingEl = document.getElementById('iaResultLoading');
+            var ocrCard = document.getElementById('iaOcrCard');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analysing…';
+            loadingEl.style.display = 'flex';
+            ocrCard.style.display = 'none';
+            try {
+                var fd = new FormData();
+                fd.append('file', _iaFile);
+                fd.append('no_save', '1');
+                var resp = await fetch('/api/upload_image', { method: 'POST', body: fd });
+                var data = await resp.json();
+                loadingEl.style.display = 'none';
+                if (!data.success) {
+                    document.getElementById('iaPlateImgBox').style.display = 'none';
+                    ocrCard.style.display = 'flex';
+                    document.getElementById('iaOcrPlate').textContent = '';
+                    document.getElementById('iaOcrConf').innerHTML = '<span style="color:#e53e3e"><i class="bi bi-x-circle"></i> ' + (data.error || 'Error') + '</span>';
+                } else if (data.detected) {
+                    if (data.image_filename) {
+                        document.getElementById('iaPlateImgLarge').src = '/api/image/' + data.image_filename;
+                        document.getElementById('iaPlateImgBox').style.display = 'flex';
+                    } else {
+                        document.getElementById('iaPlateImgBox').style.display = 'none';
+                    }
+                    document.getElementById('iaOcrPlate').textContent = data.plate;
+                    var _conf = parseFloat(data.confidence);
+                    var _bcls = _conf >= 85 ? 'ia-conf-badge--high' : _conf >= 60 ? 'ia-conf-badge--med' : 'ia-conf-badge--low';
+                    document.getElementById('iaOcrConf').innerHTML = '<span class="ia-conf-badge ' + _bcls + '">Confidence: ' + data.confidence + '%</span>';
+                    ocrCard.style.display = 'flex';
+                } else {
+                    document.getElementById('iaPlateImgBox').style.display = 'none';
+                    ocrCard.style.display = 'flex';
+                    document.getElementById('iaOcrPlate').textContent = '';
+                    document.getElementById('iaOcrConf').innerHTML = '<span style="color:#e67e22"><i class="bi bi-exclamation-circle"></i> No number plate detected</span>';
+                }
+            } catch(err) {
+                loadingEl.style.display = 'none';
+                ocrCard.style.display = 'flex';
+                document.getElementById('iaOcrPlate').textContent = '';
+                document.getElementById('iaOcrConf').innerHTML = '<span style="color:#e53e3e"><i class="bi bi-x-circle"></i> Request failed</span>';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-cpu"></i> Analyse';
+            }
+        }
+        
+        // Update latest detection panel (only with valid records; never show N/A or 0)
+        function updateLatestDetection(record) {
+            const detectionContent = document.getElementById('detectionContent');
+            
+            if (!record) {
+                if (!lastValidRecord) detectionContent.innerHTML = '<div class="no-detection">No detections yet</div>';
+                return;
+            }
+            if (!isValidDetection(record)) {
+                // Preserve previous: do not overwrite with N/A or 0
+                if (lastValidRecord) updateLatestDetection(lastValidRecord);
+                return;
+            }
+            
+            const matchScore = record.MatchScore || 0;
+            const scoreClass = matchScore >= 85 ? 'score-high' : 
+                              matchScore >= 70 ? 'score-medium' : 'score-low';
+            
+            // Only show image if a plate is detected
+            let imageHtml = '';
+            if (record.CorrectedText && record.ImageFileName) {
+                const _latestImgTs = record.Timestamp ? new Date(record.Timestamp).getTime() : Date.now();
+                imageHtml = `<div class="latest-image-slot">
+                        <img src="/api/image/${record.ImageFileName}?t=${_latestImgTs}" 
+                            class="latest-image" 
+                            alt="Latest Detection">
+                    </div>`;
+            } else {
+                imageHtml = '<div class="latest-image-slot"><div class="no-detection">No image available</div></div>';
+            }
+            
+            const time = new Date(record.Timestamp).toLocaleString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            const _ts = new Date(record.Timestamp);
+            const detectionDateStr = _ts.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const detectionTimeStr = _ts.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const confPct = (record.Confidence != null && record.Confidence > 0) ? Math.min(record.Confidence * 100, 100) : 0;
+            const confDisplay = confPct > 0 ? confPct.toFixed(1) + '%' : '-';
+            const matchArrow = matchScore >= 85 ? ' \u2191' : matchScore >= 70 ? '' : ' \u2193';
+            const scoreColor = matchScore >= 85 ? '#27ae60' : matchScore >= 70 ? '#f39c12' : '#e74c3c';
+            const matchLabel = matchScore >= 85 ? 'High' : matchScore >= 70 ? 'Medium' : 'Low';
+            const matchIconHtml = matchScore >= 85 ? '\u2191' : matchScore >= 70 ? '\u2191' : '\u2193';
+
+            detectionContent.innerHTML = `
+                <div class="detection-details" style="flex:0 0 auto;">
+                    <div class="detail-item full-width latest-detection-top-card" style="margin-bottom: 5px; min-height: 115px;">
+                        <div class="row latest-detection-row" style="height:100%;">
+                            <div class="col-7 latest-detection-text-col" style="overflow:hidden;min-width:0;height:100%;">
+                                <div class="detail-wrapper" style="flex-direction:column;justify-content:flex-end;height:100%;align-items:flex-start;gap:4px;padding:8px 4px 8px 12px;">
+                                    <div class="detail-value plate-number" style="width:100%;text-align:left;">${record.CorrectedText || '-'}</div>
+                                    <div class="detail-label" style="text-align:left;">Detected Plate Number</div>
+                                </div>
+                            </div>
+                            <div class="col-5 latest-detection-image-col" style="height:100%;display:flex;align-items:center;">
+                                ${imageHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="detection-details latest-detection-stats" style="flex:1;min-height:0;grid-template-rows:1fr 1fr;">                    
+                    <div class="detail-item dmc-card stats-detail-item">
+                        <div style="display:flex;align-items:baseline;gap:24px;flex-wrap:wrap;">
+                            <div class="cell-date">${detectionDateStr}</div>
+                            <div class="cell-time">${detectionTimeStr}</div>
+                        </div>
+                        <div class="dmc-label">Detection Time</div>
+                    </div>
+                    <div class="detail-item dmc-card stats-detail-item" style="justify-content:flex-end;">
+                        <div class="dmc-label">Confidence</div>
+                        <div class="dmc-bar-row">
+                            <div class="metric-bar-track">
+                                <div class="conf-heat-fill" style="width:${confPct.toFixed(1)}%;"></div>
+                            </div>
+                            <span class="dmc-value" style="color:#1a1a1a;">${confDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item stats-detail-item">
+                        <div class="cell-time" style="font-size:clamp(13px,1vw,15px);">${record.ProcessingTime != null ? record.ProcessingTime.toFixed(2) + 's' : '-'}</div>
+                        <div class="detail-label">Inference Time</div>
+                    </div>
+                    <div class="detail-item stats-detail-item">
+                        <div class="detail-value" style="color:#000000 !important;font-weight:800;">${record.RawText || '-'}</div>
+                        <div class="detail-label">Raw OCR Text</div>                        
+                    </div>
+                </div>
+            `;
+            // Trigger fade-slide-in animation on each new detection
+            detectionContent.classList.remove('detected');
+            void detectionContent.offsetWidth; // force reflow
+            detectionContent.classList.add('detected');
+        }
+        
+        // Update current time in header
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            document.getElementById('currentTime').textContent = timeString;
+        }
+        
+        // Update time every second
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        // Toggle MQTT fields visibility
+        function toggleMqttFields() {
+            const mqttEnabled = document.getElementById('mqttEnabled').checked;
+            const mqttFieldsContainer = document.getElementById('mqttFieldsContainer');
+            const mqttInputs = mqttFieldsContainer.querySelectorAll('input');
+            
+            if (mqttEnabled) {
+                mqttFieldsContainer.style.display = 'block';
+                mqttInputs.forEach(input => input.disabled = false);
+            } else {
+                mqttFieldsContainer.style.display = 'none';
+                mqttInputs.forEach(input => input.disabled = true);
+            }
+        }
+
+        // Report section — test capture
+        async function reportTest(btn) {
+            const reportBtn = btn || document.getElementById('reportTestBtn');
+            const origHtml = reportBtn ? reportBtn.innerHTML : '';
+            const resultBox = document.getElementById('reportResultBox');
+            const reportPreviewImg = document.getElementById('reportPreviewImg');
+            const reportNoFeed = document.getElementById('reportNoFeedPlaceholder');
+
+            // Show live feed while testing
+            if (reportPreviewImg) {
+                reportPreviewImg.src = '/video_feed?t=' + Date.now();
+                reportPreviewImg.style.display = 'block';
+                if (reportNoFeed) reportNoFeed.style.display = 'none';
+            }
+
+            if (reportBtn) {
+                reportBtn.disabled = true;
+                reportBtn.innerHTML = '<i class="bi bi-hourglass-split" style="margin-right:6px;"></i> Detecting...';
+            }
+            if (resultBox) resultBox.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/detect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+
+                if (data.best_match && data.best_match.vehicle_ocr_value) {
+                    const m = data.best_match;
+                    document.getElementById('reportPlateText').textContent = m.vehicle_ocr_value;
+                    document.getElementById('reportConfidence').textContent =
+                        m.confidence != null ? 'Confidence: ' + parseFloat(m.confidence).toFixed(1) + '%' : '';
+                    const plateImg = document.getElementById('reportPlateImg');
+                    if (m.image_filename) {
+                        plateImg.src = '/api/image/' + m.image_filename;
+                        plateImg.style.display = 'block';
+                    } else {
+                        plateImg.style.display = 'none';
+                    }
+                    if (resultBox) resultBox.style.display = 'flex';
+                    // Capture current video frame for PDF (best-effort; tainted canvas is silently skipped)
+                    let fullImgDataUrl = null;
+                    try {
+                        const videoEl = document.getElementById('reportPreviewImg');
+                        if (videoEl && videoEl.naturalWidth > 0) {
+                            const c = document.createElement('canvas');
+                            c.width = videoEl.naturalWidth || 640;
+                            c.height = videoEl.naturalHeight || 480;
+                            c.getContext('2d').drawImage(videoEl, 0, 0, c.width, c.height);
+                            fullImgDataUrl = c.toDataURL('image/jpeg', 0.85);
+                        }
+                    } catch(e) { fullImgDataUrl = null; }
+                    // Store PDF data (overwrites any previous; generation flag unchanged)
+                    window._reportPdfData = {
+                        plateText: m.vehicle_ocr_value,
+                        confidence: parseFloat(m.confidence != null ? m.confidence : 0).toFixed(1),
+                        plateImgFilename: m.image_filename || null,
+                        fullImgDataUrl: fullImgDataUrl,
+                        rtspUrl: (document.getElementById('rtspUrl') || {}).value || '',
+                        locationName: (document.getElementById('locationName') || {}).value || '',
+                        locationId: (document.getElementById('locationId') || {}).value || '',
+                        timestamp: new Date().toLocaleString()
+                    };
+                    // Show Download PDF button (reset to downloadable state for this new result)
+                    const dlBtn = document.getElementById('reportDownloadBtn');
+                    if (dlBtn && !window._reportPdfGenerated) {
+                        dlBtn.style.display = 'inline-flex';
+                        dlBtn.disabled = false;
+                        dlBtn.style.background = '#1565c0';
+                        dlBtn.style.cursor = 'pointer';
+                        dlBtn.innerHTML = '<i class="bi bi-file-earmark-arrow-down" style="margin-right:6px;"></i> Download PDF';
+                    } else if (dlBtn && window._reportPdfGenerated) {
+                        dlBtn.style.display = 'inline-flex';
+                    }
+                } else {
+                    window._reportPdfData = null;
+                    // Hide download button on no-detection
+                    const dlBtn = document.getElementById('reportDownloadBtn');
+                    if (dlBtn) dlBtn.style.display = 'none';
+                    showCustomPopup('No number plate detected. Please adjust the camera angle', 'reportPreviewBox');
+                }
+            } catch (e) {
+                window._reportPdfData = null;
+                const dlBtn = document.getElementById('reportDownloadBtn');
+                if (dlBtn) dlBtn.style.display = 'none';
+                showCustomPopup('No number plate detected. Please adjust the camera angle', 'reportPreviewBox');
+            } finally {
+                if (reportBtn) { reportBtn.disabled = false; reportBtn.innerHTML = origHtml; }
+                // Update report tick mark based on whether OCR data was captured
+                updateNavCheckMarks();
+            }
+        }
+
+        // Update password — stores salted hash in ANPR_PasswordStore table
+        async function updatePassword() {
+            const newPwd = document.getElementById('newPassword').value;
+            const confirmPwd = document.getElementById('confirmPassword').value;
+
+            if (!newPwd) {
+                showCustomPopup('Please enter a new password.', 'configPanelSettings');
+                return;
+            }
+            if (newPwd !== confirmPwd) {
+                showCustomPopup('Passwords do not match.', 'configPanelSettings');
+                return;
+            }
+            if (newPwd.length < 6) {
+                showCustomPopup('Password must be at least 6 characters.', 'configPanelSettings');
+                return;
+            }
+
+            const btn = document.getElementById('updatePasswordBtn');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split" style="margin-right:6px;"></i> Updating...'; }
+
+            try {
+                const res = await fetch('/api/update_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password: newPwd })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                    showCustomPopup('Password updated successfully.', 'configPanelSettings');
+                } else {
+                    showCustomPopup('Failed to update password.', 'configPanelSettings');
+                }
+            } catch (e) {
+                showCustomPopup('Failed to update password.', 'configPanelSettings');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+            }
+        }
+
+        // Check database connection
+        async function checkDatabaseConnection() {
+            const btn    = document.getElementById('dbCheckBtn');
+            const status = document.getElementById('dbCheckStatus');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-hourglass-split" style="margin-right:6px;"></i> Checking...';
+            }
+            if (status) { status.style.display = 'none'; status.textContent = ''; }
+
+            const dbType     = document.getElementById('dbType').value;
+            const dbServer   = document.getElementById('dbServer').value.trim();
+            const dbName     = document.getElementById('dbName').value.trim();
+            const dbUsername = document.getElementById('dbUsername').value.trim();
+            const dbPassword = document.getElementById('dbPassword').value;
+
+            if (!dbServer) {
+                if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+                showCustomPopup('Please enter the Database Server.', 'configPanelDatabase');
+                return;
+            }
+
+            function showDbStatus(ok, msg) {
+                if (ok) {
+                    // Show success toast centered inside the database panel box
+                    var panel = document.getElementById('configPanelDatabase');
+                    if (panel && getComputedStyle(panel).position === 'static') {
+                        panel.style.position = 'relative';
+                    }
+                    let toast = document.getElementById('dbSuccessToast');
+                    if (!toast) {
+                        toast = document.createElement('div');
+                        toast.id = 'dbSuccessToast';
+                        toast.style.cssText = [
+                            'position:absolute', 'top:50%', 'left:50%',
+                            'transform:translateX(-50%) translateY(calc(-50% + 20px))',
+                            'background:linear-gradient(135deg,#1b5e20,#2e7d32)',
+                            'color:#fff', 'font-size:15px', 'font-weight:600',
+                            'padding:14px 32px', 'border-radius:10px',
+                            'box-shadow:0 6px 28px rgba(0,0,0,0.32)',
+                            'z-index:9999', 'opacity:0',
+                            'transition:opacity 0.28s ease, transform 0.28s ease',
+                            'pointer-events:none', 'white-space:nowrap'
+                        ].join(';');
+                        (panel || document.body).appendChild(toast);
+                    }
+                    toast.innerHTML = '<i class="bi bi-check-circle-fill" style="margin-right:9px;"></i>' + msg;
+                    // Animate in
+                    requestAnimationFrame(function(){
+                        requestAnimationFrame(function(){
+                            toast.style.opacity = '1';
+                            toast.style.transform = 'translateX(-50%) translateY(-50%)';
+                        });
+                    });
+                    // Animate out after 2 s
+                    clearTimeout(toast._hideTimer);
+                    toast._hideTimer = setTimeout(function() {
+                        toast.style.opacity = '0';
+                        toast.style.transform = 'translateX(-50%) translateY(calc(-50% + 20px))';
+                    }, 2000);
+                    if (status) { status.style.display = 'none'; status.textContent = ''; }
+                } else {
+                    // Show error toast at the same center position as the success toast
+                    var panel = document.getElementById('configPanelDatabase');
+                    if (panel && getComputedStyle(panel).position === 'static') {
+                        panel.style.position = 'relative';
+                    }
+                    let errToast = document.getElementById('dbErrorToast');
+                    if (!errToast) {
+                        errToast = document.createElement('div');
+                        errToast.id = 'dbErrorToast';
+                        errToast.style.cssText = [
+                            'position:absolute', 'top:50%', 'left:50%',
+                            'transform:translateX(-50%) translateY(calc(-50% + 20px))',
+                            'background:linear-gradient(135deg,#7f0000,#b71c1c)',
+                            'color:#fff', 'font-size:14px', 'font-weight:500',
+                            'padding:14px 28px', 'border-radius:10px',
+                            'box-shadow:0 6px 28px rgba(0,0,0,0.36)',
+                            'z-index:9999', 'opacity:0',
+                            'transition:opacity 0.28s ease, transform 0.28s ease',
+                            'pointer-events:none', 'max-width:86%',
+                            'text-align:center', 'line-height:1.45'
+                        ].join(';');
+                        (panel || document.body).appendChild(errToast);
+                    }
+                    // Trim long driver error messages to one readable line
+                    const _short = msg.length > 90 ? msg.substring(0, 87) + '...' : msg;
+                    errToast.innerHTML = '<i class="bi bi-x-circle-fill" style="margin-right:9px;"></i>Database not connected';
+                    requestAnimationFrame(function(){
+                        requestAnimationFrame(function(){
+                            errToast.style.opacity = '1';
+                            errToast.style.transform = 'translateX(-50%) translateY(-50%)';
+                        });
+                    });
+                    clearTimeout(errToast._hideTimer);
+                    errToast._hideTimer = setTimeout(function() {
+                        errToast.style.opacity = '0';
+                        errToast.style.transform = 'translateX(-50%) translateY(calc(-50% + 20px))';
+                    }, 3000);
+                    if (status) { status.style.display = 'none'; status.textContent = ''; }
+                }
+            }
+
+            try {
+                const res = await fetch('/api/test_db_connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        db_type: dbType,
+                        db_server: dbServer,
+                        db_name: dbName,
+                        db_username: dbUsername,
+                        db_password: dbPassword
+                    })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    if (status) { status.style.display = 'none'; }  // hide any previous error
+                    updateNavCheckMarks();
+                    // Save DB credentials to connection.enc (encrypted) via dedicated endpoint
+                    fetch('/api/save_db_credentials', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            db_type:     dbType,
+                            db_server:   dbServer,
+                            db_name:     dbName,
+                            db_username: dbUsername,
+                            db_password: dbPassword
+                        })
+                    }).then(function(r){ return r.json(); })
+                      .then(function(sr){
+                          if (sr.success) {
+                              showDbStatus(true, 'Database connected — credentials saved securely');
+                              // Re-evaluate banner immediately — no need to wait for next 3s poll
+                              if (window._bannerPoll) window._bannerPoll();
+                          } else {
+                              showDbStatus(false, 'Connected but could not save credentials: ' + (sr.error || ''));
+                          }
+                      })
+                      .catch(function(e){ console.error('save_db_credentials error:', e); });
+                } else {
+                    const errMsg = json.error ? json.error : 'Could not connect to database.';
+                    showDbStatus(false, errMsg);
+                }
+            } catch (e) {
+                showDbStatus(false, 'Connection failed — check server address and credentials.');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+            }
+        }
+
+        // Sidebar navigation for config modal
+        function switchConfigSection(sectionName, navEl) {
+            // Stop camera feed only when leaving camera section
+            if (sectionName !== 'camera') {
+                const camImg = document.getElementById('cameraPreviewImg');
+                const camPlaceholder = document.getElementById('cameraNoFeedPlaceholder');
+                const statusEl = document.getElementById('cameraFeedStatus');
+                if (camImg && camImg.src && !camImg.src.endsWith('#')) {
+                    camImg.onerror = null;
+                    camImg.onload = null;
+                    camImg.src = '';
+                    camImg.style.display = 'none';
+                    if (camPlaceholder) camPlaceholder.style.display = 'flex';
+                    if (statusEl) statusEl.textContent = 'No feed';
+                }
+            }
+            // Stop report feed only when leaving report section
+            if (sectionName !== 'report') {
+                const repImg = document.getElementById('reportPreviewImg');
+                const repNoFeed = document.getElementById('reportNoFeedPlaceholder');
+                if (repImg && repImg.src && !repImg.src.endsWith('#')) {
+                    repImg.onerror = null;
+                    repImg.onload = null;
+                    repImg.src = '';
+                    repImg.style.display = 'none';
+                    if (repNoFeed) repNoFeed.style.display = 'flex';
+                }
+            }
+            // Hide all panels
+            document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
+            // Deactivate all nav items
+            document.querySelectorAll('.config-nav-item').forEach(n => n.classList.remove('active'));
+            // Show target panel
+            const panelId = 'configPanel' + sectionName.charAt(0).toUpperCase() + sectionName.slice(1);
+            const panel = document.getElementById(panelId);
+            if (panel) panel.classList.add('active');
+            // Activate nav item
+            if (navEl) navEl.classList.add('active');
+            // Slide the bounding box to the active item
+            updateNavSlider(navEl);
+            // Scroll content area to top
+            const contentArea = document.querySelector('.config-content-area');
+            if (contentArea) contentArea.scrollTop = 0;
+            // Auto-start report preview feed when entering Report section (reset everything first)
+            if (sectionName === 'report') {
+                // Reset OCR result
+                const resultBox = document.getElementById('reportResultBox');
+                if (resultBox) resultBox.style.display = 'none';
+                const plateText = document.getElementById('reportPlateText');
+                if (plateText) plateText.textContent = '';
+                const confEl = document.getElementById('reportConfidence');
+                if (confEl) confEl.textContent = '';
+                const plateImg = document.getElementById('reportPlateImg');
+                if (plateImg) { plateImg.src = ''; plateImg.style.display = 'none'; }
+                // Reset download button state (hide unless already downloaded)
+                const dlBtn = document.getElementById('reportDownloadBtn');
+                if (dlBtn) {
+                    if (window._reportPdfGenerated) {
+                        dlBtn.style.display = 'inline-flex';
+                        dlBtn.disabled = true;
+                        dlBtn.style.background = '#757575';
+                        dlBtn.style.cursor = 'default';
+                        dlBtn.style.boxShadow = 'none';
+                        dlBtn.innerHTML = '<i class="bi bi-check-circle" style="margin-right:6px;"></i> Already Downloaded';
+                    } else {
+                        dlBtn.style.display = 'none';
+                    }
+                }
+                // Clear pending PDF data on revisit so fresh test is required
+                window._reportPdfData = null;
+                // Always start stream when entering Report section
+                const repImg = document.getElementById('reportPreviewImg');
+                const repNoFeed = document.getElementById('reportNoFeedPlaceholder');
+                if (repImg) {
+                    repImg.onerror = null;
+                    repImg.onload = null;
+                    repImg.src = '';
+                    repImg.style.display = 'none';
+                    if (repNoFeed) repNoFeed.style.display = 'flex';
+                    setTimeout(function() {
+                        repImg.onerror = function() {
+                            repImg.style.display = 'none';
+                            if (repNoFeed) repNoFeed.style.display = 'flex';
+                        };
+                        repImg.src = '/video_feed?t=' + Date.now();
+                        repImg.style.display = 'block';
+                        if (repNoFeed) repNoFeed.style.display = 'none';
+                    }, 80);
+                }
+                // Do NOT auto-show popup here — only show after user explicitly clicks Test button
+            }
+            // Update check marks for visited sections
+            updateNavCheckMarks();
+        }
+
+        // Move the sliding bounding box to match the active nav item
+        function updateNavSlider(activeEl) {
+            const slider = document.getElementById('navSlider');
+            const nav = document.getElementById('configNav');
+            if (!slider || !nav) return;
+            const el = activeEl || nav.querySelector('.config-nav-item.active');
+            if (!el) return;
+            slider.style.top    = el.offsetTop + 'px';
+            slider.style.left   = el.offsetLeft + 'px';
+            slider.style.width  = el.offsetWidth + 'px';
+            slider.style.height = el.offsetHeight + 'px';
+            slider.style.opacity = '1';
+        }
+
+        // Show green check marks on sidebar items that have been filled
+        function updateNavCheckMarks() {
+            // Camera: check if RTSP URL is filled
+            const cameraCheck = document.getElementById('navCheckCamera');
+            if (cameraCheck) {
+                cameraCheck.classList.toggle('visible', !!(document.getElementById('rtspUrl') && document.getElementById('rtspUrl').value.trim()));
+            }
+            // MQTT
+            const mqttCheck = document.getElementById('navCheckMqtt');
+            if (mqttCheck) {
+                const mqttEnabled = document.getElementById('mqttEnabled');
+                mqttCheck.classList.toggle('visible', mqttEnabled && mqttEnabled.checked);
+            }
+            // Branding
+            const brandingCheck = document.getElementById('navCheckBranding');
+            if (brandingCheck) {
+                const title = document.getElementById('deptTitle');
+                brandingCheck.classList.toggle('visible', !!(title && title.value.trim()));
+            }
+            // Database
+            const dbCheck = document.getElementById('navCheckDatabase');
+            if (dbCheck) {
+                const dbServer = document.getElementById('dbServer');
+                dbCheck.classList.toggle('visible', !!(dbServer && dbServer.value.trim()));
+            }
+            // Model
+            const modelCheck = document.getElementById('navCheckModel');
+            if (modelCheck) {
+                modelCheck.classList.toggle('visible', true); // Always show since defaults are fine
+            }
+            // Report: tick shows only after PDF has been downloaded
+            const reportCheck = document.getElementById('navCheckReport');
+            if (reportCheck) {
+                reportCheck.classList.toggle('visible', !!(window._reportPdfGenerated));
+            }
+        }
+
+        // Tracks whether the camera was successfully verified in this modal session
+        window._cameraVerified = false;
+
+        // Camera check & save — saves RTSP URL then tests live stream
+        async function checkAndSaveCamera() {
+            const url = document.getElementById('rtspUrl').value.trim();
+            if (!url) {
+                showCustomPopup('Please enter an RTSP URL first.', 'cameraPreviewBox');
+                return;
+            }
+
+            const checkBtn = document.querySelector('[onclick="checkAndSaveCamera()"]');
+            const origHtml = checkBtn ? checkBtn.innerHTML : '';
+            if (checkBtn) {
+                checkBtn.disabled = true;
+                checkBtn.innerHTML = '<i class="bi bi-hourglass-split" style="margin-right:6px;"></i> Connecting...';
+            }
+
+            const camImg         = document.getElementById('cameraPreviewImg');
+            const camPlaceholder = document.getElementById('cameraNoFeedPlaceholder');
+            const statusEl       = document.getElementById('cameraFeedStatus');
+
+            // Show loading state immediately — don't wait for anything
+            if (statusEl) statusEl.textContent = 'Connecting...';
+
+            // 1. Save the RTSP URL to config so server reinitialises the stream
+            let _dbConfigured = true;  // assume DB ok unless told otherwise
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rtsp_url: url })
+                });
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error || 'Config save failed');
+                _dbConfigured = json.db_configured !== false;
+            } catch (e) {
+                if (checkBtn) { checkBtn.disabled = false; checkBtn.innerHTML = origHtml; }
+                showCustomPopup('Failed to save config: ' + e.message, 'cameraPreviewBox');
+                return;
+            }
+
+            // 2. Stream immediately after save — server reinit runs in background.
+            //    Show img right away; detect first rendered frame via rAF pixel check.
+            //    Retry every 500ms up to 8 times (~4s budget).
+            let _camDone     = false;
+            let _camAttempt  = 0;
+            const _camMaxAttempts = 8;
+
+            function _tryStream() {
+                if (_camDone) return;
+                _camAttempt++;
+                const _gen = _camAttempt;
+
+                // Show the img box immediately so frames appear the instant they flow
+                camImg.onerror = null;
+                camImg.onerror = function() {
+                    if (_camDone || _gen !== _camAttempt) return;
+                    camImg.src = '';
+                    camImg.style.display = 'none';
+                    if (camPlaceholder) camPlaceholder.style.display = 'flex';
+                    if (_camAttempt < _camMaxAttempts) {
+                        setTimeout(_tryStream, 500);
+                    } else {
+                        _camDone = true;
+                        if (statusEl) statusEl.textContent = 'No feed';
+                        if (checkBtn) { checkBtn.disabled = false; checkBtn.innerHTML = origHtml; }
+                        const _active = document.getElementById('configPanelCamera') &&
+                                        document.getElementById('configPanelCamera').classList.contains('active');
+                        if (_active) showCustomPopup('Camera not connected. Check RTSP URL.', 'cameraPreviewBox');
+                    }
+                };
+
+                // Show the img immediately — frames will appear as soon as server sends them
+                const _ts = Date.now();
+                camImg.src = '/video_feed?t=' + _ts;
+                camImg.style.display = 'block';
+                if (camPlaceholder) camPlaceholder.style.display = 'none';
+
+                // Use canvas pixel check to detect first real frame (no fixed 2s wait)
+                const _canvas = document.createElement('canvas');
+                _canvas.width = 4; _canvas.height = 4;
+                const _ctx = _canvas.getContext('2d');
+                let _checks = 0;
+                const _maxChecks = 60; // 3s at 50ms intervals
+
+                // Shared success handler — called by pixel-check or fallback
+                function _onStreamLive() {
+                    if (_camDone || _gen !== _camAttempt) return;
+                    _camDone = true;
+                    window._cameraVerified = true;
+                    if (checkBtn) { checkBtn.disabled = false; checkBtn.innerHTML = origHtml; }
+
+                    // Update main UI stream and report preview only after stream confirmed
+                    var _mainStream = document.getElementById('stream');
+                    if (_mainStream) _mainStream.src = '/video_feed?t=' + (Date.now() + 1);
+                    var _repImg = document.getElementById('reportPreviewImg');
+                    var _repNoFeed = document.getElementById('reportNoFeedPlaceholder');
+                    if (_repImg) {
+                        _repImg.onerror = function() {
+                            _repImg.style.display = 'none';
+                            if (_repNoFeed) _repNoFeed.style.display = 'flex';
+                        };
+                        _repImg.src = '/video_feed?t=' + (Date.now() + 2);
+                        _repImg.style.display = 'block';
+                        if (_repNoFeed) _repNoFeed.style.display = 'none';
+                    }
+
+                    const _active = document.getElementById('configPanelCamera') &&
+                                    document.getElementById('configPanelCamera').classList.contains('active');
+                    if (_active) {
+                        if (!_dbConfigured) {
+                            showCustomPopup('Camera connected — URL saved in memory only (database not configured)', 'cameraPreviewBox');
+                        } else {
+                            showCustomPopup('Camera connected successfully.', 'cameraPreviewBox');
+                        }
+                    }
+                    updateNavCheckMarks();
+                    // Resolution check
+                            const resOverlay = document.getElementById('resolutionOverlay');
+                            const resBadge = document.getElementById('resolutionBadge');
+                            if (resOverlay) { resOverlay.style.opacity = '0'; resOverlay.style.display = 'none'; }
+                            fetch('/api/check_resolution', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ url: document.getElementById('rtspUrl').value.trim() })
+                            }).then(r => r.json()).then(json => {
+                                if (!json.success || !resOverlay || !resBadge) return;
+                                const w = json.width, h = json.height;
+                                const TARGET_W = 1920, TARGET_H = 1080;
+                                let label;
+                                if (w === TARGET_W && h === TARGET_H) {
+                                    resBadge.style.background = 'rgba(20,120,60,0.72)';
+                                    label = '\u25CF  ' + w + ' \u00d7 ' + h + ' \u2014 Optimal';
+                                } else if (w > TARGET_W || h > TARGET_H) {
+                                    resBadge.style.background = 'rgba(180,80,0,0.72)';
+                                    label = '\u25CF  ' + w + ' \u00d7 ' + h + ' \u2014 Too High';
+                                } else {
+                                    resBadge.style.background = 'rgba(160,30,30,0.72)';
+                                    label = '\u25CF  ' + w + ' \u00d7 ' + h + ' \u2014 Too Low';
+                                }
+                                resBadge.textContent = label;
+                                resOverlay.style.display = 'block';
+                                requestAnimationFrame(function() {
+                                    resOverlay.style.opacity = '1';
+                                    resOverlay.style.transform = 'translateY(0)';
+                                });
+                                if (resOverlay._hideTimer) clearTimeout(resOverlay._hideTimer);
+                                resOverlay._hideTimer = setTimeout(function() {
+                                    resOverlay.style.opacity = '0';
+                                    resOverlay.style.transform = 'translateY(-4px)';
+                                    setTimeout(function() { resOverlay.style.display = 'none'; }, 320);
+                                }, 2000);
+                    }).catch(function() {});
+                }
+
+                function _checkFrame() {
+                    if (_camDone || _gen !== _camAttempt) return;
+                    _checks++;
+                    try {
+                        _ctx.drawImage(camImg, 0, 0, 4, 4);
+                        const px = _ctx.getImageData(0, 0, 1, 1).data;
+                        if (px[3] > 0) {
+                            _onStreamLive();
+                            return;
+                        }
+                    } catch(e) { /* canvas taint / not loaded yet — keep polling */ }
+
+                    if (_checks < _maxChecks) {
+                        setTimeout(_checkFrame, 50);
+                    } else {
+                        // Canvas pixel check exhausted (MJPEG streams can block canvas reads).
+                        // If onerror hasn't fired by now the stream is live — treat as success.
+                        if (!_camDone) _onStreamLive();
+                    }
+                }
+                setTimeout(_checkFrame, 50);
+            }
+
+            // Start immediately — no artificial delay after config save
+            _tryStream();
+        }
+
+        function stopCameraPreview() {
+            const camImg = document.getElementById('cameraPreviewImg');
+            const camPlaceholder = document.getElementById('cameraNoFeedPlaceholder');
+            const statusEl = document.getElementById('cameraFeedStatus');
+            if (camImg) {
+                camImg.onerror = null;
+                camImg.onload = null;
+                camImg.src = '';
+                camImg.style.display = 'none';
+            }
+            if (camPlaceholder) camPlaceholder.style.display = 'flex';
+            if (statusEl) statusEl.textContent = 'No feed';
+            const resOverlay = document.getElementById('resolutionOverlay');
+            if (resOverlay) { resOverlay.style.opacity = '0'; resOverlay.style.display = 'none'; }
+            showCustomPopup('Camera preview stopped.', 'cameraPreviewBox');
+        }
+
+        // Configuration Modal Functions
+        function openConfigModal() {
+            window._cameraVerified = false;
+            loadCurrentConfiguration();
+            document.getElementById('configModal').style.display = 'block';
+            // Reset to Camera section when opening
+            switchConfigSection('camera', document.querySelector('[data-section=camera]'));
+            // Initialise slider position (after layout is painted)
+            setTimeout(function() {
+                updateNavSlider(document.querySelector('.config-nav-item.active'));
+            }, 30);
+            // Keep main UI stream running while modal is open
+        }
+        
+        function closeConfigModal() {
+            document.getElementById('configModal').style.display = 'none';
+        }
+        
+        // Section-scoped toast — appears centred over the visible area of the given panel
+        function showCustomPopup(message, sectionId, forceStyle) {
+            const isNoVehicle = (message.toLowerCase().includes('no vehicle') || message.toLowerCase().includes('no number plate'));
+            const isError = isNoVehicle || forceStyle === 'error' || message.toLowerCase().includes('not connected') || message.toLowerCase().includes('failed') || message.toLowerCase().includes('please enter');
+            const isSuccess = !isError && (forceStyle === 'success' || true);
+
+            // Remove any existing toast
+            document.querySelectorAll('.section-toast').forEach(t => t.remove());
+
+            const panel = sectionId ? document.getElementById(sectionId) : null;
+            const toast = document.createElement('div');
+            toast.className = 'section-toast';
+
+            const iconSvg = isNoVehicle
+                ? `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="rgba(255,255,255,0.22)"/><path d="M6 6l6 6M12 6l-6 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+                : (isSuccess
+                ? `<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="rgba(255,255,255,0.2)"/><path d="M5 9l2.8 2.8L13 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+                : `<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="rgba(255,255,255,0.2)"/><path d="M6 6l6 6M12 6l-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+            toast.innerHTML = `<span style="flex-shrink:0;display:flex;">${iconSvg}</span><span>${message}</span>`;
+
+            // Calculate center of the visible part of the panel using fixed positioning
+            let centerX, centerY;
+            if (panel) {
+                const rect = panel.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    centerX = rect.left + rect.width / 2;
+                    centerY = rect.top + rect.height / 2;
+                } else {
+                    // Element is hidden/zero-size — fall back to screen center
+                    centerX = window.innerWidth / 2;
+                    centerY = window.innerHeight / 2;
+                }
+            } else {
+                centerX = window.innerWidth / 2;
+                centerY = window.innerHeight / 2;
+            }
+
+            Object.assign(toast.style, {
+                position: 'fixed',
+                top: centerY + 'px',
+                left: centerX + 'px',
+                transform: 'translate(-50%, -50%) scale(0.85)',
+                background: isNoVehicle ? '#b91c1c' : (isSuccess ? '#1a7a4a' : '#c0392b'),
+                color: '#ffffff',
+                padding: isNoVehicle ? '18px 32px 18px 24px' : '16px 26px 16px 20px',
+                borderRadius: '10px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                fontSize: isNoVehicle ? '14px' : '13px',
+                fontWeight: '600',
+                minWidth: isNoVehicle ? '280px' : 'auto',
+                border: isNoVehicle ? '2px solid rgba(255,255,255,0.25)' : (isSuccess ? '1px solid rgba(80,220,130,0.4)' : '2px solid rgba(255,255,255,0.85)'),
+                textAlign: 'center',
+                zIndex: '99999',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                whiteSpace: 'nowrap',
+                opacity: '0',
+                transition: 'opacity 0.22s ease, transform 0.22s ease',
+                pointerEvents: 'none'
+            });
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translate(-50%, -50%) scale(1)';
+            });
+            // Error/warning messages stay longer so the user can read them
+            var _toastDuration = isError ? 5000 : 2800;
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -50%) scale(0.85)';
+                setTimeout(() => toast.remove(), 250);
+            }, _toastDuration);
+        }
+        
+        // Load current configuration
+        async function loadCurrentConfiguration() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                if (config) {
+                    document.getElementById('rtspUrl').value = config.rtsp_url || '';
+                                        document.getElementById('locationName').value = config.location_name || '';
+                                        document.getElementById('locationId').value = config.location_id || '';
+                                        document.getElementById('locationCoords').value = config.location_coords || '';
+                    document.getElementById('deptTitle').value = config.dept_title || '';
+                    document.getElementById('deptSubtitle').value = config.dept_subtitle || '';
+                    document.getElementById('footerDept').value = config.footer_dept || '';
+                    document.getElementById('mqttEnabled').checked = config.mqtt_enabled !== false; // Default to true
+                    document.getElementById('mqttBroker').value = config.mqtt_broker || '';
+                    document.getElementById('mqttPort').value = config.mqtt_port || '';
+                    document.getElementById('mqttSubscribe').value = config.mqtt_subscribe_topic || '';
+                    document.getElementById('mqttPublish').value = config.mqtt_publish_topic || '';
+                    document.getElementById('dbType').value = config.db_type || 'MSSQL';
+                    document.getElementById('dbServer').value = config.db_server || '';
+                    document.getElementById('dbName').value = config.db_name || '';
+                    document.getElementById('dbUsername').value = config.db_username || '';
+                    document.getElementById('boxPaddingWidthPx').value = config.box_padding_width_px !== undefined ? config.box_padding_width_px : 10;
+                    document.getElementById('boxPaddingHeightPx').value = config.box_padding_height_px !== undefined ? config.box_padding_height_px : 10;
+                    document.getElementById('enableRegexCorrection').checked = config.enable_regex_correction !== false;
+                    document.getElementById('frameSkipInterval').value = config.frame_skip_interval !== undefined ? config.frame_skip_interval : 3;
+                    document.getElementById('confThresh640').value  = config.conf_thresh_640  !== undefined ? config.conf_thresh_640  : 0.85;
+                    document.getElementById('confThresh1280').value = config.conf_thresh_1280 !== undefined ? config.conf_thresh_1280 : 0.75;
+                    document.getElementById('autoLoginToggle').checked = config.auto_login !== false; // default true
+                    // Pre-fill password from saved .env (user can change it; field is masked)
+                    if (config.db_password) document.getElementById('dbPassword').value = config.db_password;
+
+                    // Update MQTT fields visibility based on loaded state
+                    toggleMqttFields();
+                    // Update sidebar check marks
+                    updateNavCheckMarks();
+                }
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+            }
+        }
+        
+        // Save configuration
+        async function saveConfiguration(event) {
+            if (event) event.preventDefault();
+
+            const mqttEnabled = document.getElementById('mqttEnabled').checked;
+
+            // Logo upload must be awaited (we need the filename before building the config object)
+            let deptLogoFilename = '';
+            const logoInput = document.getElementById('deptLogoFile');
+            if (logoInput && logoInput.files && logoInput.files.length > 0) {
+                try {
+                    const fd = new FormData();
+                    fd.append('file', logoInput.files[0]);
+                    const upRes = await fetch('/api/upload_dept_logo', { method: 'POST', body: fd });
+                    const upJson = await upRes.json();
+                    if (!upJson.success) {
+                        alert('❌ Logo upload failed: ' + (upJson.error || 'Unknown error'));
+                        return;
+                    }
+                    deptLogoFilename = upJson.dept_logo_filename || '';
+                } catch (e) {
+                    alert('❌ Logo upload failed: ' + (e.message || e));
+                    return;
+                }
+            }
+
+            const config = {
+                rtsp_url: document.getElementById('rtspUrl').value,
+                location_name: document.getElementById('locationName').value,
+                location_id: document.getElementById('locationId').value,
+                location_coords: document.getElementById('locationCoords').value,
+                dept_title: document.getElementById('deptTitle').value,
+                dept_subtitle: document.getElementById('deptSubtitle').value,
+                footer_dept: document.getElementById('footerDept').value,
+                dept_branding_enabled: true,
+                ...(deptLogoFilename ? { dept_logo_filename: deptLogoFilename } : {}),
+                mqtt_enabled: mqttEnabled,
+                mqtt_broker: mqttEnabled ? document.getElementById('mqttBroker').value : '',
+                mqtt_port: mqttEnabled ? parseInt(document.getElementById('mqttPort').value) : 0,
+                mqtt_subscribe_topic: mqttEnabled ? document.getElementById('mqttSubscribe').value : '',
+                mqtt_publish_topic: mqttEnabled ? document.getElementById('mqttPublish').value : '',
+                db_type: document.getElementById('dbType').value,
+                db_server: document.getElementById('dbServer').value,
+                db_name: document.getElementById('dbName').value,
+                db_username: document.getElementById('dbUsername').value,
+                db_password: document.getElementById('dbPassword').value,
+                box_padding_width_px: parseInt(document.getElementById('boxPaddingWidthPx').value, 10) || 0,
+                box_padding_height_px: parseInt(document.getElementById('boxPaddingHeightPx').value, 10) || 0,
+                enable_blur_model: true,
+                enable_regex_correction: document.getElementById('enableRegexCorrection').checked,
+                frame_skip_interval: parseInt(document.getElementById('frameSkipInterval').value, 10) || 3,
+                conf_thresh_640:  parseFloat(document.getElementById('confThresh640').value)  || 0.85,
+                conf_thresh_1280: parseFloat(document.getElementById('confThresh1280').value) || 0.75,
+                auto_login: document.getElementById('autoLoginToggle').checked
+            };
+
+            // ── Instant feedback: close modal & update UI NOW, before server responds ──
+            closeConfigModal();
+            showCustomPopup('Configuration saved.');
+            updateNavCheckMarks();
+            // Re-evaluate test button now that config may have changed
+            if (window._recheckTestBtn) window._recheckTestBtn();
+
+            // Live-update header branding & location name immediately from form values
+            // Fall back to hardcoded defaults so header branding is always visible
+            var _t = config.dept_title || 'Departments of mines and Geology';
+            var _s = config.dept_subtitle || 'Government Of Rajasthan';
+            var _l = config.dept_logo_filename || deptLogoFilename || '';
+            var _el = function(id) { return document.getElementById(id); };
+            if (_el('deptTitleDisplay')) _el('deptTitleDisplay').textContent = _t;
+            if (_el('deptSubtitleDisplay')) _el('deptSubtitleDisplay').textContent = _s;
+            var _fd = config.footer_dept || '';
+            if (_el('footerText')) _el('footerText').textContent = '\u00a9 ' + (_fd || 'Department of Mines \u0026 Geology, Govt. of Rajasthan') + ' 2026. All rights reserved.';
+            if (_el('deptLogoImg')) {
+                if (_l) { _el('deptLogoImg').src = '/static/' + _l + '?t=' + Date.now(); }
+                _el('deptLogoImg').style.display = '';  // always show — default logo is always present
+            }
+            if (_el('deptTextArea')) _el('deptTextArea').style.display = '';  // always show
+            if (_el('deptBrandingArea')) _el('deptBrandingArea').style.display = '';
+            if (_el('locationNameText')) _el('locationNameText').textContent = config.location_name || '';
+
+            // Reconnect video stream after server reinit completes (~1.5 s)
+            setTimeout(function() {
+                var streamImg = document.getElementById('stream');
+                if (streamImg) streamImg.src = '/video_feed?t=' + Date.now();
+            }, 1500);
+
+            // Fire POST in background — UI is already updated, no need to await
+            fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            }).then(function(r) { return r.json(); })
+              .then(function(result) {
+                  if (!result.success) console.warn('Config save warning:', result.error);
+              })
+              .catch(function(err) { console.error('Config save error:', err); });
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('configModal');
+            if (event.target == modal) {
+                closeConfigModal();
+            }
+        }
+        
+        // Close application
+        async function closeApplication() {
+            try {
+                await fetch('/api/shutdown', { method: 'POST' });
+                // Give a moment for the shutdown request to be processed
+                setTimeout(() => {
+                    window.close();
+                }, 500);
+            } catch (error) {
+                console.error('Error closing application:', error);
+            }
+        }
+        
+        // ── Test Button State — driven by system_status banner (model / db / camera) ─────
+        // Disabled + red if MODEL, DATABASE or CAMERA shows ✕ in the banner.
+        // Branding (dept title) is NOT a requirement.
+        (function startWarmupPoller() {
+            var testBtn = document.getElementById('mainTestBtn');
+
+            function setReady() {
+                if (!testBtn) return;
+                testBtn.disabled = false;
+                testBtn.style.removeProperty('background-color');
+                testBtn.style.removeProperty('border-color');
+                testBtn.style.removeProperty('cursor');
+                testBtn.title = '';
+                var tip = document.getElementById('testBtnTooltip');
+                if (tip) tip.style.display = 'none';
+            }
+
+            function setNotReady(reason) {
+                if (!testBtn) return;
+                testBtn.disabled = true;
+                testBtn.style.backgroundColor = '#e53935';
+                testBtn.style.borderColor = '#e53935';
+                testBtn.style.cursor = 'not-allowed';
+                var tip = document.getElementById('testBtnTooltip');
+                if (tip) { tip.textContent = reason; tip.style.display = ''; }
+            }
+
+            var FAIL_STATES = ['failed', 'skipped', 'not_configured'];
+
+            function poll() {
+                // Step 1: check warmup_status — this uses _warmup_complete.is_set()
+                // which only becomes true AFTER warmup inference finishes (~13s)
+                fetch('/api/warmup_status')
+                    .then(function(r) { return r.json(); })
+                    .then(function(w) {
+                        if (!w.ready) {
+                            setNotReady('Model warm-up in progress\u2026 please wait');
+                            setTimeout(poll, 5000); return;
+                        }
+                        // Step 2: warmup done — now check db/camera via system_status
+                        fetch('/api/system_status')
+                            .then(function(r) { return r.json(); })
+                            .then(function(s) {
+                                var ocrState  = s.paddleocr || 'pending';
+                                var yoloState = s.yolo      || 'pending';
+                                var dbState   = s.database  || 'pending';
+                                var camState  = s.camera    || 'pending';
+
+                                var modelFail = FAIL_STATES.indexOf(ocrState) >= 0 || FAIL_STATES.indexOf(yoloState) >= 0;
+                                var dbFail    = FAIL_STATES.indexOf(dbState)  >= 0;
+                                var camFail   = FAIL_STATES.indexOf(camState) >= 0;
+                                var dbReady   = dbState  === 'ready';
+                                var camReady  = camState === 'ready';
+
+                                if (modelFail) {
+                                    setNotReady('Model failed to load — check system logs');
+                                    setTimeout(poll, 4000); return;
+                                }
+                                if (dbFail) {
+                                    setNotReady('Database not connected — configure in Settings');
+                                    setTimeout(poll, 4000); return;
+                                }
+                                if (camFail) {
+                                    setNotReady('Camera not connected — check RTSP URL in Settings');
+                                    setTimeout(poll, 4000); return;
+                                }
+                                if (!dbReady || !camReady) {
+                                    setNotReady('System initialising\u2026 please wait');
+                                    setTimeout(poll, 2000); return;
+                                }
+                                // All good — enable
+                                setReady();
+                            })
+                            .catch(function() { setTimeout(poll, 3000); });
+                    })
+                    .catch(function() { setTimeout(poll, 3000); });
+            }
+
+            poll();
+            // Expose so saveConfiguration can re-check after config changes
+            window._recheckTestBtn = poll;
+        })();
+
+        // Test number plate detection
+        async function testNumberPlate(btn) {
+            // btn is passed as 'this' from the onclick attribute — no dependency on global event
+            var testBtn = btn || document.querySelector('.test-btn');
+            const originalText = testBtn ? testBtn.innerHTML : '';
+            try {
+                // Instant visual feedback
+                if (testBtn) {
+                    testBtn.innerHTML = '<i class="bi bi-hourglass-split" style="margin-right: 8px;"></i> Testing...';
+                    testBtn.disabled = true;
+                }
+
+                // Guard: check DB status before even calling detect
+                try {
+                    const stsRes = await fetch('/api/system_status');
+                    const sts = await stsRes.json();
+                    const dbOk = sts.database === 'ready';
+                    if (!dbOk) {
+                        if (testBtn) { testBtn.innerHTML = originalText; testBtn.disabled = false; }
+                        showCustomPopup('Database not connected yet — configure database credentials in System Configuration to save and view detection records.', null, 'error');
+                        return;
+                    }
+                } catch(e) { /* if status check itself fails, let detect proceed */ }
+
+                // Call detect API — backend does YOLO+OCR+DB insert synchronously before responding
+                const response = await fetch('/api/detect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const result = await response.json();
+
+                // Re-enable button immediately — no artificial wait needed
+                if (testBtn) { testBtn.innerHTML = originalText; testBtn.disabled = false; testBtn.style.removeProperty('background-color'); testBtn.style.removeProperty('border-color'); testBtn.style.removeProperty('cursor'); }
+
+                // Show result popup — only show error, not success notification
+                if (!(result.best_match && result.best_match.vehicle_ocr_value)) {
+                    showCustomPopup('No number plate detected.', null, 'error');
+                }
+
+                // Refresh records table in background — does not block the button
+                loadRecords();
+
+            } catch (error) {
+                console.error('Error testing number plate:', error);
+                showCustomPopup('Error: ' + error.message);
+                if (testBtn) { testBtn.innerHTML = originalText; testBtn.disabled = false; testBtn.style.removeProperty('background-color'); testBtn.style.removeProperty('border-color'); testBtn.style.removeProperty('cursor'); }
+            }
+        }
+        
+        // Upload model .pt file → re-encrypt into .res2.enc
+        async function uploadModelFile() {
+            const input = document.getElementById('modelFileInput');
+            if (!input.files || input.files.length === 0) {
+                showCustomPopup('Please select a .pt model file first.');
+                return;
+            }
+            const btn = document.getElementById('modelUploadBtn');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split" style="margin-right:6px;"></i>Uploading...';
+            try {
+                const fd = new FormData();
+                fd.append('file', input.files[0]);
+                const res = await fetch('/api/upload_model', { method: 'POST', body: fd });
+                const json = await res.json();
+                if (json.success) {
+                    input.value = '';
+                    if (json.restart_required) {
+                        // Model saved but could not hot-reload — show persistent restart banner
+                        let banner = document.getElementById('restartBanner');
+                        if (!banner) {
+                            banner = document.createElement('div');
+                            banner.id = 'restartBanner';
+                            banner.style.cssText = 'background:linear-gradient(135deg,#7c3a00,#b85c00);color:#fff8f0;padding:10px 16px;border-radius:8px;font-size:0.85em;font-weight:600;display:flex;align-items:center;gap:10px;margin-top:10px;border:1px solid rgba(255,160,50,0.4);';
+                            banner.innerHTML = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="rgba(255,160,50,0.25)"/><path d="M9 5v4" stroke="#ffa040" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="12.5" r="1" fill="#ffa040"/></svg><span>Model uploaded. <strong>Please restart the application</strong> to activate it.</span>';
+                            const actionsEl = document.querySelector('.config-actions');
+                            if (actionsEl) actionsEl.parentNode.insertBefore(banner, actionsEl);
+                            else document.querySelector('#configForm').appendChild(banner);
+                        }
+                        showCustomPopup(json.message);
+                    } else {
+                        showCustomPopup(json.message);
+                    }
+                } else {
+                    showCustomPopup('✗ Upload failed: ' + (json.error || 'Unknown error'));
+                }
+            } catch (e) {
+                showCustomPopup('✗ Upload failed: ' + (e.message || e));
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        // Open browser
+        async function openCameraConfig() {
+            // Open browser page with URL bar in the same window
+            window.location.href = '/browser';
+        }
+        
+        // Refresh when: initial load, Test button success/fail, or new external detection (MQTT/API)
+        loadRecords();
+
+        // Lightweight poll: check if the latest record's timestamp changed.
+        // Only calls loadRecords() when new data appears — no wasted fetches.
+        // Works reliably in PyQt WebEngine (no SSE/EventSource needed).
+        var _lastKnownTs = null;
+        function _pollForNewRecords() {
+            fetch('/api/records?limit=1').then(function(r){ return r.json(); }).then(function(d){
+                var ts = (d.records && d.records.length > 0) ? d.records[0].Timestamp : '';
+                if (_lastKnownTs === null) {
+                    // First poll: just record the current state, don't trigger a refresh
+                    _lastKnownTs = ts;
+                } else if (ts !== _lastKnownTs) {
+                    // New record detected — refresh only if no fetch already in progress
+                    _lastKnownTs = ts;
+                    if (!_loadInFlight) loadRecords();
+                }
+            }).catch(function(){});
+        }
+        setInterval(_pollForNewRecords, 5000);
+
+        // Bind Refresh button properly - works for both manual clicks and programmatic calls
+        (function bindRefreshButton() {
+            var btn = document.getElementById('refreshRecordsBtn');
+            if (btn) {
+                // Clear any existing handlers
+                var newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                // Add fresh click handler
+                newBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('✓ Refresh button clicked - loading records...');
+                    loadRecords();
+                }, false);
+                
+                console.log('✓ Refresh button bound successfully');
+            } else {
+                console.log('Refresh button not found, retrying in 100ms...');
+                setTimeout(bindRefreshButton, 100);
+            }
+        })();
+
+        // Prevent zoom (Ctrl+scroll, Ctrl+plus/minus/0)
+        document.addEventListener('wheel', function(e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) e.preventDefault();
+        });
+
+        // ── PDF REPORT GENERATION ────────────────────────────────────────────────
+        // Lazy-load heavy PDF libraries only when needed so the dashboard paints faster
+        const PDF_LIB_SOURCES = [
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'
+        ];
+        let _pdfLibPromise = null;
+
+        function _isPdfLibReady() {
+            return !!(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API &&
+                      typeof window.jspdf.jsPDF.API.autoTable === 'function');
+        }
+
+        function _injectScriptOnce(src) {
+            return new Promise(function(resolve, reject) {
+                const existing = document.querySelector('script[data-dynamic-src="' + src + '"]');
+                if (existing) {
+                    if (existing.dataset.ready === '1') {
+                        resolve();
+                        return;
+                    }
+                    existing.addEventListener('load', function() { resolve(); }, { once: true });
+                    existing.addEventListener('error', function() { reject(new Error('Failed to load ' + src)); }, { once: true });
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.dataset.dynamicSrc = src;
+                script.onload = function() {
+                    script.dataset.ready = '1';
+                    resolve();
+                };
+                script.onerror = function() { reject(new Error('Failed to load ' + src)); };
+                document.head.appendChild(script);
+            });
+        }
+
+        function ensurePdfLibraries() {
+            if (_isPdfLibReady()) {
+                return Promise.resolve();
+            }
+            if (_pdfLibPromise) {
+                return _pdfLibPromise;
+            }
+            _pdfLibPromise = PDF_LIB_SOURCES.reduce(function(chain, src) {
+                return chain.then(function() { return _injectScriptOnce(src); });
+            }, Promise.resolve()).then(function() {
+                if (!_isPdfLibReady()) {
+                    throw new Error('PDF libraries failed to initialise');
+                }
+            }).catch(function(err) {
+                _pdfLibPromise = null;
+                throw err;
+            });
+            return _pdfLibPromise;
+        }
+
+        // Called by the Download PDF button in the Report section
+        async function downloadAnprPdf() {
+            if (!window._reportPdfData) return;
+            if (window._reportPdfGenerated) return; // already downloaded
+            const dlBtn = document.getElementById('reportDownloadBtn');
+            const originalBtnHtml = dlBtn ? dlBtn.innerHTML : '';
+            if (dlBtn) {
+                dlBtn.disabled = true;
+                dlBtn.innerHTML = '<i class="bi bi-hourglass-split" style="margin-right:6px;"></i> Generating...';
+            }
+            try {
+                const success = await generateAnprPdf(window._reportPdfData);
+                if (!success) {
+                    throw new Error('PDF engine unavailable');
+                }
+                window._reportPdfGenerated = true;
+                if (dlBtn) {
+                    dlBtn.style.background = '#757575';
+                    dlBtn.style.cursor = 'default';
+                    dlBtn.style.boxShadow = 'none';
+                    dlBtn.innerHTML = '<i class="bi bi-check-circle" style="margin-right:6px;"></i> Already Downloaded';
+                }
+                updateNavCheckMarks();
+                setTimeout(() => closeApplication(), 1500);
+            } catch (err) {
+                console.warn('PDF generation failed:', err);
+                if (dlBtn) {
+                    dlBtn.disabled = false;
+                    dlBtn.innerHTML = originalBtnHtml || '<i class="bi bi-file-earmark-arrow-down" style="margin-right:6px;"></i> Download PDF';
+                }
+                showCustomPopup('Unable to generate PDF. Please check your network and try again.', 'configPanelReport');
+            }
+        }
+        async function _fetchBase64(url) {
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) return null;
+                const blob = await resp.blob();
+                return await new Promise(function(resolve) {
+                    const reader = new FileReader();
+                    reader.onload = function() { resolve(reader.result); };
+                    reader.onerror = function() { resolve(null); };
+                    reader.readAsDataURL(blob);
+                });
+            } catch(e) { return null; }
+        }
+
+        async function generateAnprPdf(d) {
+            try {
+                await ensurePdfLibraries();
+            } catch (error) {
+                console.warn('PDF libraries failed to load:', error);
+                return false;
+            }
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                console.warn('jsPDF not loaded — PDF skipped');
+                return false;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const W = doc.internal.pageSize.getWidth();   // 210 mm
+            const H = doc.internal.pageSize.getHeight();  // 297 mm
+
+            // Fetch plate crop image as base64
+            let plateImgDataUrl = null;
+            if (d.plateImgFilename) {
+                plateImgDataUrl = await _fetchBase64('/api/image/' + d.plateImgFilename);
+            }
+
+            // ── HEADER BANNER ────────────────────────────────────────────
+            // ── HEADER (large centred title like a formal report) ─────────────
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.setTextColor(20, 20, 20);
+            doc.text('ANPR Detection Report', W / 2, 22, { align: 'center' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(120, 120, 120);
+            doc.text('Generated: ' + d.timestamp, W / 2, 30, { align: 'center' });
+
+            doc.setDrawColor(180, 180, 180);
+            doc.setLineWidth(0.4);
+            doc.line(14, 35, W - 14, 35);
+
+            // ── DETECTION SUMMARY TABLE ──────────────────────────────────
+            let y = 44;
+            doc.setTextColor(15, 41, 66);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text('Detection Summary', 14, y);
+
+            doc.autoTable({
+                startY: y + 4,
+                head: [['Field', 'Value']],
+                body: [
+                    ['RTSP / Camera URL', d.rtspUrl || 'N/A'],
+                    ['WeighBridge Name', d.locationName || 'N/A'],
+                    ['WeighBridge ID', d.locationId || 'N/A'],
+                    ['OCR Result (Plate Number)', d.plateText || 'N/A'],
+                    ['Confidence Score', d.confidence + '%'],
+                    ['Detection Timestamp', d.timestamp]
+                ],
+                styles: { fontSize: 10, cellPadding: 5, valign: 'middle' },
+                headStyles: {
+                    fillColor: [15, 41, 66], textColor: [255, 255, 255],
+                    fontStyle: 'bold', fontSize: 10
+                },
+                alternateRowStyles: { fillColor: [240, 248, 252] },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 72, textColor: [44, 62, 80] },
+                    1: { textColor: [30, 30, 30] }
+                },
+                margin: { left: 14, right: 14 },
+                tableLineColor: [200, 215, 225],
+                tableLineWidth: 0.3
+            });
+
+            y = doc.lastAutoTable.finalY + 12;
+
+            // ── IMAGES SECTION ───────────────────────────────────────────
+            doc.setTextColor(15, 41, 66);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text('Captured Images', 14, y);
+            y += 3;
+            doc.setDrawColor(23, 151, 161);
+            doc.setLineWidth(0.5);
+            doc.line(14, y, W - 14, y);
+            y += 7;
+
+            const imgAreaW = W - 28;
+            const hasFullImg = !!d.fullImgDataUrl;
+            const hasPlate   = !!plateImgDataUrl;
+
+            if (hasFullImg || hasPlate) {
+                // Layout: full image left (62%), plate right (33%), gap 5%
+                const fullW  = hasFullImg ? imgAreaW * 0.62 : 0;
+                const plateW = hasPlate   ? (hasFullImg ? imgAreaW * 0.33 : imgAreaW * 0.55) : 0;
+                const gapW   = hasFullImg && hasPlate ? imgAreaW - fullW - plateW : 0;
+                const plateX = hasFullImg ? 14 + fullW + gapW : 14;
+
+                // Labels — highlighted badge style
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8.5);
+                const labelH = 6, labelPadX = 3.5;
+                if (hasFullImg) {
+                    doc.setFillColor(15, 41, 66);   // navy
+                    doc.roundedRect(14, y - 4.5, fullW, labelH, 1.2, 1.2, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.text('Full Vehicle Image', 14 + labelPadX, y);
+                }
+                if (hasPlate) {
+                    doc.setFillColor(0, 105, 92);   // teal
+                    doc.roundedRect(plateX, y - 4.5, plateW, labelH, 1.2, 1.2, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.text('Number Plate Image', plateX + labelPadX, y);
+                }
+                doc.setFont('helvetica', 'normal');
+                y += 3;
+
+                const fullH  = fullW  * 0.65;
+                const plateH = plateW * 0.60;
+                const rowH   = Math.max(fullH, plateH);
+
+                if (hasFullImg) {
+                    try {
+                        doc.addImage(d.fullImgDataUrl, 'JPEG', 14, y, fullW, fullH);
+                        doc.setDrawColor(190, 210, 220);
+                        doc.setLineWidth(0.2);
+                        doc.rect(14, y, fullW, fullH);
+                    } catch(e) {
+                        doc.setTextColor(150, 150, 150);
+                        doc.setFontSize(8);
+                        doc.text('[Full vehicle image unavailable]', 14, y + 10);
+                    }
+                }
+                if (hasPlate) {
+                    try {
+                        doc.addImage(plateImgDataUrl, 'JPEG', plateX, y, plateW, plateH);
+                        doc.setDrawColor(190, 210, 220);
+                        doc.setLineWidth(0.2);
+                        doc.rect(plateX, y, plateW, plateH);
+                    } catch(e) {
+                        doc.setTextColor(150, 150, 150);
+                        doc.setFontSize(8);
+                        doc.text('[Plate image unavailable]', plateX, y + 10);
+                    }
+                }
+                y += rowH + 4;
+            } else {
+                doc.setTextColor(150, 150, 150);
+                doc.setFontSize(9);
+                doc.text('No images available', 14, y);
+                y += 10;
+            }
+
+            // ── NOTE BOX ─────────────────────────────────────────────────
+            y += 4;
+            doc.setFillColor(247, 251, 255);
+            doc.setDrawColor(200, 215, 225);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(14, y, imgAreaW, 14, 2, 2, 'FD');
+            doc.setTextColor(15, 41, 66);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Note:', 18, y + 5.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(60, 60, 60);
+            doc.text('This report is auto-generated by ANPR System. Plate number and confidence are based on OCR analysis.', 30, y + 5.5);
+
+            // ── FOOTER ───────────────────────────────────────────────────
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.3);
+            doc.line(14, H - 14, W - 14, H - 14);
+            doc.setTextColor(160, 160, 160);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.text('ANPR System', W / 2, H - 8, { align: 'center' });
+
+            // Save / send to server
+            const filename = 'ANPR_Report.pdf';
+            try {
+                const pdfBase64 = doc.output('datauristring').split(',')[1];
+                const resp = await fetch('/api/save_pdf_report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pdf_base64: pdfBase64, filename: filename })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    console.log('[PDF] Saved to:', result.path);
+                    // Auto-open with OS default PDF viewer
+                    await fetch('/api/open_pdf_report', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: filename })
+                    });
+                } else {
+                    console.warn('[PDF] Server save failed:', result.error);
+                }
+            } catch(e) {
+                console.warn('[PDF] Could not save to server:', e);
+            }
+            return true;
+        }
+        // ── END PDF REPORT ────────────────────────────────────────────────────────
+    </script>
+
+    <script>
+    <!-- System Init Status Banner poller — polls /api/system_status every 1.5 s -->
+    (function() {
+        var banner  = document.getElementById('initBanner');
+        var stsYOLO = document.getElementById('stsYOLO');
+        var stsDB   = document.getElementById('stsDB');
+        var stsCam  = document.getElementById('stsCam');
+
+        function badge(el, label, state) {
+            var icons = { pending:'⏳', loading:'◌', ready:'✓', failed:'✕', skipped:'✕' };
+            var styles = {
+                pending: 'background:#eff6ff;color:#1a3a5c;border-color:#1797A1',
+                loading: 'background:#eff6ff;color:#2563eb;border-color:#1797A1',
+                ready:   'background:#f0fdf4;color:#16a34a;border-color:#86efac',
+                failed:  'background:#fff1f2;color:#dc2626;border-color:#fca5a5',
+                skipped: 'background:#fff1f2;color:#dc2626;border-color:#fca5a5'
+            };
+            el.textContent = label + ' ' + (icons[state] || '⏳');
+            el.style.cssText = el.style.cssText.replace(/background[^;]+;|color[^;]+;|border-color[^;]+;/g,'');
+            var s = styles[state] || styles.pending;
+            s.split(';').forEach(function(rule){ if(rule.trim()){ var p=rule.split(':'); if(p.length===2) el.style[p[0].trim().replace(/-([a-z])/g,function(m,c){return c.toUpperCase();})] = p[1].trim(); }});
+        }
+
+        function poll() {
+            fetch('/api/system_status')
+                .then(function(r){ return r.json(); })
+                .then(function(s) {
+                    // Merge OCR + YOLO into single MODEL badge: ✓ only if both ready
+                    var ocrState  = s.paddleocr || 'pending';
+                    var yoloState = s.yolo      || 'pending';
+                    var modelState;
+                    if (ocrState === 'loading' || yoloState === 'loading') modelState = 'loading';
+                    else if (ocrState === 'ready' && yoloState === 'ready') modelState = 'ready';
+                    else if (ocrState === 'failed' || yoloState === 'failed') modelState = 'failed';
+                    else modelState = ocrState !== 'pending' ? ocrState : yoloState;
+
+                    badge(stsYOLO, 'MODEL',    modelState);
+                    badge(stsDB,   'DATABASE', s.database || 'pending');
+                    badge(stsCam,  'CAMERA',   s.camera   || 'pending');
+
+                    // Update bottom accent stripe to reflect overall status
+                    var anyFail = modelState==='failed' || modelState==='skipped' ||
+                                  ['failed','skipped','not_configured'].indexOf(s.database)>=0 ||
+                                  ['failed','skipped','not_configured'].indexOf(s.camera)>=0;
+                    var allLoading = modelState==='loading' || s.database==='loading' || s.camera==='loading';
+                    banner.style.borderColor = '#1797A1';
+
+                    if (s.overall === 'ready') {
+                        var dbFailed  = ['failed','skipped','not_configured'].indexOf(s.database) >= 0;
+                        var camFailed = ['failed','skipped','not_configured'].indexOf(s.camera)   >= 0;
+                        var modFailed = modelState === 'failed';
+                        var anyFailed = dbFailed || camFailed || modFailed;
+                        var anyLoading = ['paddleocr','yolo','database','camera'].some(function(k){ return s[k] === 'loading'; });
+
+                        if (anyFailed) {
+                            document.getElementById('initSpinner').style.display = 'none';
+                            setTimeout(poll, 3000);
+                        } else if (anyLoading) {
+                            setTimeout(poll, 1000);
+                        } else {
+                            banner.style.transition = 'opacity 0.6s';
+                            banner.style.opacity = '0';
+                            setTimeout(function(){ banner.style.display = 'none'; }, 650);
+                        }
+                        return;
+                    }
+                    setTimeout(poll, 1500);
+                })
+                .catch(function() { setTimeout(poll, 800); });
+        }
+        setTimeout(poll, 500);
+        window._bannerPoll = poll;
+    })();
+    </script>
+</body>
+</html>
