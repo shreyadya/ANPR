@@ -6,14 +6,14 @@
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
-      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
       "sha256": "adba8bd454e460c4f12461a07909b79093871c9ab402108d28d7288373d8004f",
       "size": 1576960
     },
     {
       "name": ".res3.enc",
       "dest": ".res3.enc",
-      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/.res3.enc",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
       "sha256": "b1e0e807f6c18f61b3f2f339cf5849150b4750dcda30620167195457dd0b465e",
       "size": 116452
     }
