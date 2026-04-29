@@ -1,26 +1,26 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "build_date": "2026-04-29",
-  "release_notes": "Bug fixes and improvements.",
+  "release_notes": "Fixed - Updater now launches with 2s delay to prevent file lock errors",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "89a173141a14f27578faa646e6bd16e6b75396e96773060ae38c53b0299be09b",
-      "size": 1574400
+      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
+      "sha256": "78d5c7593ea950483230a4b750b7cfd39936d1f99c7396f34ce73b41286a9b94",
+      "size": 1578496
     },
     {
       "name": ".res3.enc",
       "dest": ".res3.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "53f65201c9e3ba1d2682eb6bbf2a8c9e7f006764d3f1b62148499bbe6f7f43ae",
+      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/.res3.enc",
+      "sha256": "b1e0e807f6c18f61b3f2f339cf5849150b4750dcda30620167195457dd0b465e",
       "size": 116452
     },
     {
       "name": ".res4.enc",
       "dest": ".res4.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res4.enc",
+      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/.res4.enc",
       "sha256": "0d02d9ea1e1461ec74797757c782bc49df2dcb48f68335bd825d95e3ffda4532",
       "size": 5686648
     }
