@@ -1,7 +1,7 @@
 {
-  "version": "1.0.20",
+  "version": "1.0.21",
   "build_date": "2026-04-30",
-  "release_notes": "OTA: retry update checks during startup so freshly pushed releases appear on the same run",
+  "release_notes": "UI: rename left panel heading from Smart Detection back to Latest Detection",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "0c2f1f5e384035c368befae0d6d5419065f6bcd2b445cd2dcdc9b2d3aa04c240",
+      "sha256": "78652816f714918998de7b1a2b097bc7ea9541a63f1ba6b6a4b53ee04648a219",
       "size": 116452
     }
   ]
