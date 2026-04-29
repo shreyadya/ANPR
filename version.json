@@ -1,13 +1,13 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "build_date": "2026-04-29",
-  "release_notes": "Fixed - Updater now launches with 2s delay to prevent file lock errors",
+  "release_notes": "Increased updater delay to 5 seconds for better compatibility",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
-      "sha256": "64ef93fb78989ec3293afd4bae7806f0cd51ef648aeb557940b19bc472cef0d6",
+      "sha256": "3e6b22f52dbd3910924c3a4441c309b497e359dc8c7acbfa356cac71e3793ffe",
       "size": 1578496
     },
     {
