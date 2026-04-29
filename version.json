@@ -1,8 +1,15 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "build_date": "2026-04-29",
-  "release_notes": "Fixed crash on Download & Install (error 3221226505) - app now exits cleanly before updater runs",
+  "release_notes": "Fixed crash error dialog on Download & Install - launcher now handles update-triggered exits silently",
   "files": [
+    {
+      "name": "ANPR.exe",
+      "dest": "ANPR.exe",
+      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/ANPR.exe",
+      "sha256": "33e5e145d862639b81eca388002222298146464454372e08983ed8dcf1ee5abd",
+      "size": 10930529
+    },
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
