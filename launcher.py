@@ -9,6 +9,17 @@ import ctypes
 import socket
 import threading
 
+
+def _log_launcher_event(app_dir, message):
+    try:
+        from datetime import datetime
+        log_path = os.path.join(app_dir, '_launcher_boot.log')
+        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with open(log_path, 'a', encoding='utf-8') as fh:
+            fh.write(f'[{ts}] {message}\n')
+    except Exception:
+        pass
+
 def show_error(message, title=""):
     """Show error message box"""
     ctypes.windll.user32.MessageBoxW(0, message, title, 0x10)
@@ -31,6 +42,8 @@ def main():
     else:
         # Running as script
         app_dir = os.path.dirname(os.path.abspath(__file__))
+
+    _log_launcher_event(app_dir, f'launcher start frozen={getattr(sys, "frozen", False)} exe={sys.executable}')
     
     # Paths
     venv_python = os.path.join(app_dir, 'venv', 'Scripts', 'python.exe')
@@ -43,6 +56,7 @@ def main():
         parent_venv = os.path.join(parent_dir, 'venv', 'Scripts', 'python.exe')
         if os.path.exists(parent_venv):
             venv_python = parent_venv
+    _log_launcher_event(app_dir, f'venv_python={venv_python} exists={os.path.exists(venv_python)}')
     
     # Check for different build types (in order of preference):
     # 1. app.py (development)
@@ -340,8 +354,14 @@ def main():
             os.path.exists(flag_path) or
             (os.path.exists(manifest_path) and os.path.exists(pending_dir))
         )
+        _log_launcher_event(
+            app_dir,
+            'post-exit returncode=' + str(process.returncode) +
+            f' flag={os.path.exists(flag_path)} manifest={os.path.exists(manifest_path)} pending={os.path.exists(pending_dir)}'
+        )
 
         if update_triggered:
+            _log_launcher_event(app_dir, 'update trigger detected; starting in-process update')
             try:
                 os.remove(flag_path)
             except Exception:
