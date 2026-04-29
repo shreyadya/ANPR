@@ -1,14 +1,14 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.8",
   "build_date": "2026-04-29",
-  "release_notes": "Fix infinite update loop: updater now force-kills ANPR.exe before replacing files so locked exe is always replaceable",
+  "release_notes": "Fix: updater now launched directly (no batch file) with built-in delay - reliable on all Windows systems",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
-      "sha256": "91571d2f6c7837afa1b5879b22f0f4449ba2b80548f72593b98415a52b1cc2e2",
-      "size": 1579008
+      "sha256": "492eff37486c97c186746d465f40fdb28cca7b9a2a575acf9da490c90f484ce2",
+      "size": 1577472
     },
     {
       "name": ".res3.enc",
