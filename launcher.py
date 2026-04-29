@@ -468,7 +468,7 @@ def _do_update_in_launcher(app_dir):
                 try:
                     ev = {}
                     if os.path.exists(vp):
-                        with open(vp, 'r', encoding='utf-8') as f:
+                        with open(vp, 'r', encoding='utf-8-sig') as f:
                             ev = _json.load(f)
                     ev['version']      = new_ver
                     ev['install_date'] = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
