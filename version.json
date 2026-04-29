@@ -1,7 +1,7 @@
 {
-  "version": "1.0.11",
-  "build_date": "2026-04-29",
-  "release_notes": "Fix: OTA update fully working - uses Windows Shell launch (ShellExecuteW) to bypass Job Object, shows installing window",
+  "version": "1.0.12",
+  "build_date": "2026-04-30",
+  "release_notes": "Fix: launcher now replaces files in-process - no child process, no Job Object, guaranteed to work",
   "files": [
     {
       "name": "_internal_server.pyd",
