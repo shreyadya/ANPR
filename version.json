@@ -9,6 +9,13 @@
       "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/_internal_server.pyd",
       "sha256": "6ca0385155a3787819c47c0dc3875662b6f9584f8640641ef98b835e9bef1841",
       "size": 1578496
+    },
+    {
+      "name": ".res3.enc",
+      "dest": ".res3.enc",
+      "url": "https://raw.githubusercontent.com/OWNER/REPO/main/updates/.res3.enc",
+      "sha256": "b1e0e807f6c18f61b3f2f339cf5849150b4750dcda30620167195457dd0b465e",
+      "size": 116452
     }
   ]
 }
