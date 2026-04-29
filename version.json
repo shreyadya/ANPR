@@ -1,14 +1,14 @@
 {
-  "version": "1.0.17",
+  "version": "1.0.18",
   "build_date": "2026-04-30",
-  "release_notes": "UI: rename left panel heading from Summary Detection back to Latest Detection",
+  "release_notes": "OTA: trigger update popup when tracked files differ from the remote manifest",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "9adcc05161aac736ecf1a338287ac0d05cd29360c5e79a5a7cca6cde7b6294ef",
-      "size": 1581056
+      "sha256": "3079d31253adfd5c56bdd3a8e4e5cb9f2186d3a3a73e33780c450595d2d756fc",
+      "size": 1597952
     },
     {
       "name": ".res3.enc",

@@ -5760,6 +5760,46 @@ def _version_newer(remote, local):
     return _t(remote) > _t(local)
 
 
+def _sha256_of_file(path):
+    import hashlib as _hl
+    h = _hl.sha256()
+    with open(path, 'rb') as fh:
+        for chunk in iter(lambda: fh.read(65536), b''):
+            h.update(chunk)
+    return h.hexdigest().lower()
+
+
+def _manifest_requires_update(remote_manifest):
+    """Return (needs_update, reason) by comparing remote manifest to installed files."""
+    remote_ver = str(remote_manifest.get('version', '0'))
+    local_ver = _get_local_version()
+    if _version_newer(remote_ver, local_ver):
+        return True, f'version newer ({local_ver} -> {remote_ver})'
+
+    for item in remote_manifest.get('files', []):
+        name = item.get('name', '')
+        dest_rel = item.get('dest', name)
+        sha = str(item.get('sha256', '')).lower()
+        expected_size = item.get('size')
+        local_path = os.path.join(BASE_PATH, dest_rel)
+
+        if not os.path.exists(local_path):
+            return True, f'missing file: {dest_rel}'
+
+        try:
+            actual_size = os.path.getsize(local_path)
+            if expected_size and actual_size != int(expected_size):
+                return True, f'size mismatch for {dest_rel}: local={actual_size} remote={expected_size}'
+            if sha:
+                actual_sha = _sha256_of_file(local_path)
+                if actual_sha != sha:
+                    return True, f'hash mismatch for {dest_rel}: local={actual_sha} remote={sha}'
+        except Exception as exc:
+            return True, f'file check failed for {dest_rel}: {exc}'
+
+    return False, 'installed files already match remote manifest'
+
+
 class UpdateCheckerThread(QThread):
     """Background thread that polls the update server once."""
     update_available = pyqtSignal(dict)   # emits remote version.json dict
@@ -5788,7 +5828,9 @@ class UpdateCheckerThread(QThread):
             local_ver = _get_local_version()
             remote_ver = str(remote.get('version', '0'))
             logger.info(f"OTA check: local={local_ver} remote={remote_ver} url={_url}")
-            if _version_newer(remote_ver, local_ver):
+            needs_update, reason = _manifest_requires_update(remote)
+            logger.info(f"OTA decision: needs_update={needs_update} reason={reason}")
+            if needs_update:
                 self.update_available.emit(remote)
         except Exception:
             logger.exception("OTA check failed")
