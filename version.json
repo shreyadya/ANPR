@@ -1,7 +1,7 @@
 {
-  "version": "1.0.9",
+  "version": "1.0.10",
   "build_date": "2026-04-29",
-  "release_notes": "Fix: OTA update now fully reliable - launcher handles updater launch (eliminates Windows Job Object issue)",
+  "release_notes": "Fix: Update now shows 'Installing update' window and restarts automatically (no manual steps needed)",
   "files": [
     {
       "name": "_internal_server.pyd",
