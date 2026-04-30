@@ -1,7 +1,7 @@
 {
   "version": "1.0.24",
   "build_date": "2026-04-30",
-  "release_notes": "UI: Latest Detection heading restored",
+  "release_notes": "Popup: show only changed files and rename the action button to Update Now",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "960f7c33c4f3fbf1a9a757235a4045fb28fc1687c93686672d06c80052a4cf23",
+      "sha256": "9fdc89979f5aea92cffd852a46c0a10aadf7da27f3a802a20763803b24e5f9e3",
       "size": 116452
     }
   ]
