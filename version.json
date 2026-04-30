@@ -1,7 +1,7 @@
 {
-  "version": "1.0.21",
+  "version": "1.0.22",
   "build_date": "2026-04-30",
-  "release_notes": "UI: rename left panel heading from Smart Detection back to Latest Detection",
+  "release_notes": "UI: rename left panel heading from Latest Detection to Smart Detection",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "78652816f714918998de7b1a2b097bc7ea9541a63f1ba6b6a4b53ee04648a219",
+      "sha256": "9fdc89979f5aea92cffd852a46c0a10aadf7da27f3a802a20763803b24e5f9e3",
       "size": 116452
     }
   ]
