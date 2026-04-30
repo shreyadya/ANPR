@@ -5773,11 +5773,22 @@ def _sha256_of_file(path):
 
 def _manifest_requires_update(remote_manifest):
     """Return (needs_update, reason) by comparing remote manifest to installed files."""
+    changed_files = _get_manifest_changed_files(remote_manifest)
+    if not changed_files:
+        return False, 'installed files already match remote manifest'
+
     remote_ver = str(remote_manifest.get('version', '0'))
     local_ver = _get_local_version()
     if _version_newer(remote_ver, local_ver):
         return True, f'version newer ({local_ver} -> {remote_ver})'
 
+    first_name = changed_files[0].get('dest') or changed_files[0].get('name', 'unknown file')
+    return True, f'tracked files differ from manifest ({len(changed_files)} file(s), first={first_name})'
+
+
+def _get_manifest_changed_files(remote_manifest):
+    """Return only the manifest file entries that differ from the local install."""
+    changed_files = []
     for item in remote_manifest.get('files', []):
         name = item.get('name', '')
         dest_rel = item.get('dest', name)
@@ -5786,20 +5797,24 @@ def _manifest_requires_update(remote_manifest):
         local_path = os.path.join(BASE_PATH, dest_rel)
 
         if not os.path.exists(local_path):
-            return True, f'missing file: {dest_rel}'
+            changed_files.append(item)
+            continue
 
         try:
             actual_size = os.path.getsize(local_path)
             if expected_size and actual_size != int(expected_size):
-                return True, f'size mismatch for {dest_rel}: local={actual_size} remote={expected_size}'
+                changed_files.append(item)
+                continue
             if sha:
                 actual_sha = _sha256_of_file(local_path)
                 if actual_sha != sha:
-                    return True, f'hash mismatch for {dest_rel}: local={actual_sha} remote={sha}'
+                    changed_files.append(item)
+                    continue
         except Exception as exc:
-            return True, f'file check failed for {dest_rel}: {exc}'
+            logger.warning(f"OTA file compare failed for {dest_rel}: {exc}")
+            changed_files.append(item)
 
-    return False, 'installed files already match remote manifest'
+    return changed_files
 
 
 class UpdateCheckerThread(QThread):
@@ -5861,7 +5876,7 @@ class UpdateDownloadThread(QThread):
 
     def run(self):
         import hashlib as _hl
-        files = self._manifest.get('files', [])
+        files = _get_manifest_changed_files(self._manifest)
         if not files:
             self.finished_ok.emit()
             return
@@ -5910,8 +5925,10 @@ class UpdateDownloadThread(QThread):
         # Write manifest so updater.exe knows what to replace
         manifest_path = os.path.join(BASE_PATH, '_update_manifest.json')
         try:
+            manifest_to_apply = dict(self._manifest)
+            manifest_to_apply['files'] = files
             with open(manifest_path, 'w', encoding='utf-8') as mf:
-                json.dump(self._manifest, mf, indent=2)
+                json.dump(manifest_to_apply, mf, indent=2)
         except Exception as e:
             self.finished_err.emit(f"Could not write update manifest: {e}")
             return
@@ -5934,6 +5951,7 @@ class UpdateDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
+        changed_files = _get_manifest_changed_files(self._manifest)
 
         # Header
         title = QLabel(f"  Update {self._manifest.get('version', '')} is available")
@@ -5942,20 +5960,14 @@ class UpdateDialog(QDialog):
         title.setStyleSheet("color:#1797A1;")
         layout.addWidget(title)
 
-        # Release notes
-        notes_box = QTextEdit()
-        notes_box.setReadOnly(True)
-        notes_box.setPlainText(self._manifest.get('release_notes', 'No release notes.'))
-        notes_box.setFixedHeight(80)
-        notes_box.setStyleSheet(
-            "background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;"
-            "font-size:12px;padding:4px;")
-        layout.addWidget(notes_box)
-
         # Files to be updated
-        files = self._manifest.get('files', [])
-        file_list = QLabel("Files to update:\n" + "\n".join(
-            f"  • {fi.get('name','')}  ({fi.get('size',0)//1024:,} KB)" for fi in files))
+        file_lines = [
+            f"  • {fi.get('name','')}  ({fi.get('size',0)//1024:,} KB)"
+            for fi in changed_files
+        ]
+        if not file_lines:
+            file_lines = ["  • Installed files already match the published update"]
+        file_list = QLabel("Files to update:\n" + "\n".join(file_lines))
         file_list.setStyleSheet("font-size:12px;color:#334155;")
         layout.addWidget(file_list)
 
@@ -5986,7 +5998,7 @@ class UpdateDialog(QDialog):
             "QPushButton:hover{background:#e2e8f0;}")
         self._later_btn.clicked.connect(self.reject)
 
-        self._update_btn = QPushButton("Download & Install")
+        self._update_btn = QPushButton("Update Now")
         self._update_btn.setFixedWidth(160)
         self._update_btn.setStyleSheet(
             "QPushButton{border:none;border-radius:5px;padding:6px 12px;"

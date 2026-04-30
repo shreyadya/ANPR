@@ -1,14 +1,14 @@
 {
-  "version": "1.0.22",
+  "version": "1.0.23",
   "build_date": "2026-04-30",
-  "release_notes": "UI: rename left panel heading from Latest Detection to Smart Detection",
+  "release_notes": "Popup: show only changed files and rename the action button to Update Now",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "2829065fff1d4d7da920f1d95c7238bc308dd16b444436267ab67d195433b2cd",
-      "size": 1602560
+      "sha256": "19c26aba53a4847fbe90b928f1daf44d2d9fadfeefaef486750f90b27eed7b1c",
+      "size": 1602048
     },
     {
       "name": ".res3.enc",
