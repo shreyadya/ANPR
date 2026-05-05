@@ -1,49 +1,6 @@
 {
-  "version": "1.0.46",
+  "version": "1.0.47",
   "build_date": "2026-05-06",
-  "release_notes": "UI: rename Latest Detection to Smart Detection",
-  "files": [
-    {
-      "name": "_internal_server.pyd",
-      "dest": "_internal_server.pyd",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "52004d5387b9da61470459f99620f4a78a825ed29a921ed0569af204c76d8199",
-      "size": 1650176
-    },
-    {
-      "name": ".res2.enc",
-      "dest": ".res2.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res2.enc",
-      "sha256": "caf9d18e1906772e5ed532c7a22a6406f7fc22a960571afb58f66e9584b5eddf",
-      "size": 6444772
-    },
-    {
-      "name": ".res3.enc",
-      "dest": ".res3.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "18e13f2f3dfa9416f63a877e8f64c85c2df1e061080ccbfa6466907141bf6848",
-      "size": 119012
-    },
-    {
-      "name": ".res4.enc",
-      "dest": ".res4.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res4.enc",
-      "sha256": "5000ac2a82463a26dbdd8620898b07471c08a8d1cf6e976ae001bb8210329794",
-      "size": 5687032
-    },
-    {
-      "name": "ANPR_SETUP.exe",
-      "dest": "ANPR_SETUP.exe",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/ANPR_SETUP.exe",
-      "sha256": "d417818a176fe402a787cb8d5bdbd8490c35ca1509c9f76eae62fc8ad5519df5",
-      "size": 23808944
-    },
-    {
-      "name": "requirements.txt",
-      "dest": "requirements.txt",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/requirements.txt",
-      "sha256": "ba8c815265972ff3915e0b8eab8252ec396a4065327b5141d549e95bc320deaf",
-      "size": 725
-    }
-  ]
+  "release_notes": "test:testing",
+  "files": []
 }
