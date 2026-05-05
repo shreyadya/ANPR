@@ -1,7 +1,7 @@
 {
-  "version": "1.0.45",
+  "version": "1.0.46",
   "build_date": "2026-05-06",
-  "release_notes": "UI: rename Current Detection to Latest Detection",
+  "release_notes": "UI: rename Latest Detection to Smart Detection",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -21,7 +21,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "b3dfe0fc7576d551ae0d2431613e787f0ade3d4fea11bd720678fb62d40626fe",
+      "sha256": "18e13f2f3dfa9416f63a877e8f64c85c2df1e061080ccbfa6466907141bf6848",
       "size": 119012
     },
     {

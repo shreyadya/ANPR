@@ -738,10 +738,10 @@
                 </div>
             </div><!-- /stream-card -->
 
-            <!-- Card 2: Latest Detection -->
+            <!-- Card 2: Smart Detection -->
             <div class="detection-card" id="latestDetection">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h1>Latest Detection</h1>
+                    <h1>Smart Detection</h1>
                     <button class="test-btn" id="mainTestBtn" onclick="testNumberPlate(this)" style="margin-right: 20px; background-color: #e53935 !important; border-color: #e53935 !important; cursor: not-allowed; position:relative;" disabled>
                         <i class="bi bi-play-circle" style="margin-right: 8px;"></i> Test
                         <div id="testBtnTooltip" class="custom-tooltip">
@@ -1689,7 +1689,7 @@
                 imageHtml = `<div class="latest-image-slot">
                         <img src="/api/image/${record.ImageFileName}?t=${_latestImgTs}" 
                             class="latest-image" 
-                            alt="Latest Detection">
+                            alt="Smart Detection">
                     </div>`;
             } else {
                 imageHtml = '<div class="latest-image-slot"><div class="no-detection">No image available</div></div>';
