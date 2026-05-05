@@ -1,7 +1,7 @@
 {
-  "version": "1.0.31",
+  "version": "1.0.32",
   "build_date": "2026-05-05",
-  "release_notes": "ANPR_SETUP.exe \u2026 [CHANGED]",
+  "release_notes": "Test: ANPR_SETUP.exe OTA update",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -28,8 +28,8 @@
       "name": "ANPR_SETUP.exe",
       "dest": "ANPR_SETUP.exe",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/ANPR_SETUP.exe",
-      "sha256": "c0907121273aa219909bea5f8af5726f317f099d11740763aac4086c94fd7a40",
-      "size": 23808943
+      "sha256": "d417818a176fe402a787cb8d5bdbd8490c35ca1509c9f76eae62fc8ad5519df5",
+      "size": 23808944
     }
   ]
 }
