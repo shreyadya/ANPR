@@ -1,14 +1,14 @@
 {
-  "version": "1.0.49",
+  "version": "1.0.50",
   "build_date": "2026-05-06",
-  "release_notes": "test: New Detection heading",
+  "release_notes": "test: _internal_server.pyd update",
   "files": [
     {
-      "name": ".res3.enc",
-      "dest": ".res3.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "9bfc3ffca8cdede71e70f017ef0ba704a86279eefdc407a1c79050e8d9581c7b",
-      "size": 119012
+      "name": "_internal_server.pyd",
+      "dest": "_internal_server.pyd",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
+      "sha256": "52004d5387b9da61470459f99620f4a78a825ed29a921ed0569af204c76d8199",
+      "size": 1650176
     }
   ]
 }
