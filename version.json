@@ -1,21 +1,28 @@
 {
-  "version": "1.0.24",
-  "build_date": "2026-04-30",
-  "release_notes": "UI: Latest Detection heading restored",
+  "version": "1.0.25",
+  "build_date": "2026-05-05",
+  "release_notes": "Test: Smart Detection heading",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "19c26aba53a4847fbe90b928f1daf44d2d9fadfeefaef486750f90b27eed7b1c",
-      "size": 1602048
+      "sha256": "13b5cfa549520a1f14265001b23e4cf18ec91e1f79af3f9cfb49b0545f34a598",
+      "size": 1650176
     },
     {
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "960f7c33c4f3fbf1a9a757235a4045fb28fc1687c93686672d06c80052a4cf23",
-      "size": 116452
+      "sha256": "7a28f2fd3b82d71b10b7796f7ffc890c835cbff7d1bb40116d3002b0a8796fdb",
+      "size": 119012
+    },
+    {
+      "name": ".res4.enc",
+      "dest": ".res4.enc",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res4.enc",
+      "sha256": "5000ac2a82463a26dbdd8620898b07471c08a8d1cf6e976ae001bb8210329794",
+      "size": 5687032
     }
   ]
 }
