@@ -1,7 +1,7 @@
 {
-  "version": "1.0.30",
+  "version": "1.0.31",
   "build_date": "2026-05-05",
-  "release_notes": "Test: Test its working or not",
+  "release_notes": "ANPR_SETUP.exe \u2026 [CHANGED]",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -23,6 +23,13 @@
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res4.enc",
       "sha256": "5000ac2a82463a26dbdd8620898b07471c08a8d1cf6e976ae001bb8210329794",
       "size": 5687032
+    },
+    {
+      "name": "ANPR_SETUP.exe",
+      "dest": "ANPR_SETUP.exe",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/ANPR_SETUP.exe",
+      "sha256": "c0907121273aa219909bea5f8af5726f317f099d11740763aac4086c94fd7a40",
+      "size": 23808943
     }
   ]
 }
