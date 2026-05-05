@@ -1,7 +1,7 @@
 {
-  "version": "1.0.39",
+  "version": "1.0.40",
   "build_date": "2026-05-06",
-  "release_notes": "Fix: show Yes/No confirmation before applying update; hide installing dialog from taskbar",
+  "release_notes": "UI: rename Latest Detection to Latest Detections",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "b38785d63bf7201ad737cfb624767d1c0a1837281a52a0e9a31c3c87a4d3b2f7",
+      "sha256": "e036d4e3044d8b3405594053a17129309a2e4fa40ad0aa816ff3b8104d45eba9",
       "size": 119012
     },
     {
