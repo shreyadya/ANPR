@@ -1,5 +1,4 @@
-"""
-ANPR Update Manifest Generator
+r"""
 ───────────────────────────────
 Run this script from the workspace root AFTER doing a REBUILD.py build.
 It scans the built files, computes SHA-256 hashes + sizes, and writes

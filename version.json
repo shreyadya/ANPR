@@ -1,7 +1,7 @@
 {
-  "version": "1.0.44",
+  "version": "1.0.45",
   "build_date": "2026-05-06",
-  "release_notes": "Fix: restart app when pyd exits with update-signal but no update is available",
+  "release_notes": "UI: rename Current Detection to Latest Detection",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -21,7 +21,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "707ec2c83bd2d5c8e7aeff709605bf7d9a9f70cf093df44f9563fc485966b6a5",
+      "sha256": "b3dfe0fc7576d551ae0d2431613e787f0ade3d4fea11bd720678fb62d40626fe",
       "size": 119012
     },
     {
