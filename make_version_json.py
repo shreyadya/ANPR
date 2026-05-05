@@ -36,7 +36,7 @@ UPDATE_FILES = [
     {"name": ".res2.enc",            "src": "ANPR_APP/.res2.enc",             "dest": ".res2.enc"},
     {"name": ".res3.enc",            "src": "ANPR_APP/.res3.enc",             "dest": ".res3.enc"},
     {"name": ".res4.enc",            "src": "ANPR_APP/.res4.enc",             "dest": ".res4.enc"},
-    {"name": "anpr.exe",             "src": "ANPR_APP/anpr.exe",            "dest": "anpr.exe"},
+    # {"name": "anpr.exe",             "src": "ANPR_APP/anpr.exe",            "dest": "anpr.exe"},
     {"name": "ANPR_SETUP.exe",       "src": "ANPR_APP/ANPR_SETUP.exe",        "dest": "ANPR_SETUP.exe"},
     {"name": "requirements.txt",     "src": "ANPR_APP/requirements.txt",      "dest": "requirements.txt"},
     # ── Launcher / updater (uncomment when you rebuild these exes) ──────────
