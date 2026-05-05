@@ -1,7 +1,7 @@
 {
-  "version": "1.0.35",
+  "version": "1.0.36",
   "build_date": "2026-05-05",
-  "release_notes": "Cross-verify: anpr.exe OTA rename trick end-to-end test",
+  "release_notes": "Confirm: anpr.exe OTA rename trick v3",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -28,8 +28,8 @@
       "name": "anpr.exe",
       "dest": "anpr.exe",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/anpr.exe",
-      "sha256": "abf74aa9ff2263ef834da3bcabce60853a1d43f95b8e0ad391f3e4f64c318e67",
-      "size": 10960045
+      "sha256": "21b58f72e9cac9f458ff15dbed61d12af175b5c8419d6cca727175e03d5460f4",
+      "size": 10960046
     }
   ]
 }
