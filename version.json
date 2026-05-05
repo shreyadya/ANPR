@@ -32,6 +32,13 @@
       "size": 5687032
     },
     {
+      "name": "anpr.exe",
+      "dest": "anpr.exe",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/anpr.exe",
+      "sha256": "a5a109a862e2272a17b43c0f2d91abc14c7be6e780a064fda1f0b3770ef4c421",
+      "size": 10960430
+    },
+    {
       "name": "ANPR_SETUP.exe",
       "dest": "ANPR_SETUP.exe",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/ANPR_SETUP.exe",
