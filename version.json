@@ -1,13 +1,13 @@
 {
-  "version": "1.0.53",
+  "version": "1.0.54",
   "build_date": "2026-05-06",
-  "release_notes": "test: _internal_server.pyd Qt popup",
+  "release_notes": "test: _internal_server.pyd Qt popup (no second dialog)",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "0db97bc1cdaa0fc7cc280f8ad4cfdef63c9b852b982b5cbd927588c312ddf4f7",
+      "sha256": "b3c01ce34444cf012d5b504577c8d76e6aae173c2200de47647118e0819fdff2",
       "size": 1650176
     }
   ]
