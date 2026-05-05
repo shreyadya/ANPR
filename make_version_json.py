@@ -13,6 +13,14 @@ Then:
     2. git add version.json  updates/_internal_server.pyd  updates/.res3.enc  updates/.res4.enc ...
     3. git push
     Clients will auto-detect the update on next startup.
+
+IMPORTANT RULES:
+  - Only bump the version number when there are actual OTA-deliverable file changes
+    (i.e. files that are UNCOMMENTED in UPDATE_FILES below actually changed).
+  - Do NOT bump the version for launcher-only (anpr.exe) changes when anpr.exe is
+    commented out — bootstrap the new launcher manually instead:
+        Copy-Item ANPR_APP\ANPR.exe "C:\...\Desktop\ANPR\anpr.exe" -Force
+  - Every version bump causes a client popup. Only bump when there is real value.
 """
 
 import os
