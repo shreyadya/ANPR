@@ -1,7 +1,7 @@
 {
-  "version": "1.0.36",
+  "version": "1.0.37",
   "build_date": "2026-05-05",
-  "release_notes": "Confirm: anpr.exe OTA rename trick v3",
+  "release_notes": "Fix: after anpr.exe OTA, spawn new launcher and exit old one",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -28,8 +28,8 @@
       "name": "anpr.exe",
       "dest": "anpr.exe",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/anpr.exe",
-      "sha256": "21b58f72e9cac9f458ff15dbed61d12af175b5c8419d6cca727175e03d5460f4",
-      "size": 10960046
+      "sha256": "afedfd29cfe1a32864322096817e9b18c404c48561f806bd0dba5706291a4b81",
+      "size": 10959738
     }
   ]
 }
