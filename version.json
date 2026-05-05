@@ -1,7 +1,7 @@
 {
-  "version": "1.0.38",
-  "build_date": "2026-05-05",
-  "release_notes": "Fix: strip PyInstaller env vars when spawning new launcher after OTA",
+  "version": "1.0.39",
+  "build_date": "2026-05-06",
+  "release_notes": "Fix: show Yes/No confirmation before applying update; hide installing dialog from taskbar",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -28,8 +28,8 @@
       "name": "anpr.exe",
       "dest": "anpr.exe",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/anpr.exe",
-      "sha256": "cf638f1343d5ca4631024e1e7698ce18be491684d53cf405123225c613dfb363",
-      "size": 10960521
+      "sha256": "86d954eaed6fbf20fb4324965f43da0cacc51e9b4eda49285d924880212ebf73",
+      "size": 10960423
     }
   ]
 }
