@@ -1,13 +1,13 @@
 {
-  "version": "1.0.29",
+  "version": "1.0.30",
   "build_date": "2026-05-05",
-  "release_notes": "Test: Latest Detection heading",
+  "release_notes": "Test: Test its working or not",
   "files": [
     {
       "name": "_internal_server.pyd",
       "dest": "_internal_server.pyd",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "13b5cfa549520a1f14265001b23e4cf18ec91e1f79af3f9cfb49b0545f34a598",
+      "sha256": "52004d5387b9da61470459f99620f4a78a825ed29a921ed0569af204c76d8199",
       "size": 1650176
     },
     {
