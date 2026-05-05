@@ -129,6 +129,54 @@
         color: #1a3a5c;
         transition: background 0.3s, color 0.3s, border-color 0.3s;
     }
+
+    /* ── Compact / minimized-window mode ── */
+    html.window-minimized,
+    html.window-minimized body {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+    body.window-minimized .container {
+        flex: none !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+    }
+    body.window-minimized .header-bar   { display: none !important; }
+    body.window-minimized .footer        { display: none !important; }
+    body.window-minimized .stream-card   { display: none !important; }
+    body.window-minimized .right-panel   { display: none !important; }
+    body.window-minimized #mainTestBtn   { display: none !important; }
+    body.window-minimized .left-panel {
+        flex: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+    body.window-minimized .detection-card {
+        flex: none !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+    }
+    body.window-minimized .detection-content-wrapper {
+        flex: none !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
 </style>
     <div class="header-bar">
         <div class="header-left">
@@ -205,6 +253,11 @@
                         <li class="config-nav-item" data-section="imageanalysis" onclick="switchConfigSection('imageanalysis', this)">
                             <i class="bi bi-search"></i>
                             <span>Image Analysis</span>
+                        </li>
+                        <li class="config-nav-item" data-section="softwareupdate" onclick="switchConfigSection('softwareupdate', this)">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <span>Software Update</span>
+                            <span class="config-nav-update-badge" id="navUpdateBadge" style="display:none">1</span>
                         </li>
                     </ul>
                     <div class="config-sidebar-footer">
@@ -613,6 +666,49 @@
                                 <button type="button" class="config-prev-btn" onclick="switchConfigSection('report', document.querySelector('[data-section=report]'))"><i class="bi bi-arrow-left"></i> Back</button>
                             </div>
                         </div>
+
+                        <!-- ── Software Update panel ── -->
+                        <div class="config-panel" id="configPanelSoftwareupdate">
+                            <div class="config-panel-header">
+                                <h3><i class="bi bi-arrow-repeat"></i> Software Update</h3>
+                                <p class="config-panel-subtitle">Check for and install available software updates.</p>
+                            </div>
+                            <div class="config-section">
+                                <div id="suCurrentVersion" style="margin-bottom:14px;font-size:13px;color:#334155;">
+                                    <strong>Current version:</strong> <span id="suVersionText">—</span>
+                                </div>
+                                <!-- Update available card -->
+                                <div id="suUpdateCard" style="display:none;background:#f0fafb;border:1px solid #a5d8dd;border-radius:8px;padding:16px 18px;margin-bottom:14px;">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                                        <i class="bi bi-cloud-download" style="font-size:22px;color:#1797A1;"></i>
+                                        <div>
+                                            <div style="font-weight:700;color:#1797A1;font-size:14px;" id="suUpdateTitle">Update available</div>
+                                            <div style="font-size:12px;color:#64748b;" id="suUpdateDesc"></div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="su-install-btn" id="suInstallBtn" onclick="suInstallUpdate()">
+                                        <i class="bi bi-download"></i> Install Update
+                                    </button>
+                                </div>
+                                <!-- Up to date card -->
+                                <div id="suUpToDateCard" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:13px;color:#15803d;">
+                                    <i class="bi bi-check-circle-fill"></i> Your software is up to date.
+                                </div>
+                                <!-- Checking state -->
+                                <div id="suCheckingCard" style="display:none;font-size:13px;color:#64748b;margin-bottom:14px;">
+                                    <span class="su-spinner"></span> Checking for updates…
+                                </div>
+                                <!-- Error state -->
+                                <div id="suErrorCard" style="display:none;background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#dc2626;" id="suErrorMsg"></div>
+
+                                <button type="button" class="su-check-btn" id="suCheckBtn" onclick="suCheckNow()">
+                                    <i class="bi bi-arrow-clockwise"></i> Check Now
+                                </button>
+                            </div>
+                            <div class="config-panel-nav">
+                                <button type="button" class="config-prev-btn" onclick="switchConfigSection('imageanalysis', document.querySelector('[data-section=imageanalysis]'))"><i class="bi bi-arrow-left"></i> Back</button>
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -642,10 +738,10 @@
                 </div>
             </div><!-- /stream-card -->
 
-            <!-- Card 2: Latest Detection -->
+            <!-- Card 2: Current Detection -->
             <div class="detection-card" id="latestDetection">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h1>Latest Detection</h1>
+                    <h1>Current Detection</h1>
                     <button class="test-btn" id="mainTestBtn" onclick="testNumberPlate(this)" style="margin-right: 20px; background-color: #e53935 !important; border-color: #e53935 !important; cursor: not-allowed; position:relative;" disabled>
                         <i class="bi bi-play-circle" style="margin-right: 8px;"></i> Test
                         <div id="testBtnTooltip" class="custom-tooltip">
@@ -1411,6 +1507,95 @@
             var file = e.dataTransfer.files[0];
             if (file) iaHandleFile(file);
         }
+
+        // ── Software Update panel ──────────────────────────────────────────
+        // Called by Python (via runJavaScript) when an update is detected at startup
+        function onUpdateAvailable(manifest) {
+            window._suPendingManifest = manifest;
+            // Show the red badge on the sidebar nav item
+            var badge = document.getElementById('navUpdateBadge');
+            if (badge) badge.style.display = 'inline-block';
+        }
+
+        function suLoadStatus() {
+            var versionEl = document.getElementById('suVersionText');
+            var updateCard = document.getElementById('suUpdateCard');
+            var upToDateCard = document.getElementById('suUpToDateCard');
+            var checkingCard = document.getElementById('suCheckingCard');
+            var errorCard = document.getElementById('suErrorCard');
+            if (checkingCard) checkingCard.style.display = 'none';
+            if (updateCard)   updateCard.style.display = 'none';
+            if (upToDateCard) upToDateCard.style.display = 'none';
+            if (errorCard)    errorCard.style.display = 'none';
+            fetch('/api/update_status')
+                .then(function(r){ return r.json(); })
+                .then(function(data) {
+                    if (versionEl) versionEl.textContent = data.local_version || '—';
+                    if (data.pending && data.manifest) {
+                        window._suPendingManifest = data.manifest;
+                        var ver = data.manifest.version || '';
+                        if (document.getElementById('suUpdateTitle'))
+                            document.getElementById('suUpdateTitle').textContent = 'Update v' + ver + ' is available';
+                        var desc = data.manifest.description || data.manifest.notes || '';
+                        if (document.getElementById('suUpdateDesc'))
+                            document.getElementById('suUpdateDesc').textContent = desc;
+                        if (updateCard) updateCard.style.display = 'block';
+                        var badge = document.getElementById('navUpdateBadge');
+                        if (badge) badge.style.display = 'inline-block';
+                    } else {
+                        window._suPendingManifest = null;
+                        if (upToDateCard) upToDateCard.style.display = 'block';
+                    }
+                })
+                .catch(function() {
+                    if (errorCard) { errorCard.textContent = 'Could not reach update server.'; errorCard.style.display = 'block'; }
+                });
+        }
+
+        function suCheckNow() {
+            var updateCard = document.getElementById('suUpdateCard');
+            var upToDateCard = document.getElementById('suUpToDateCard');
+            var checkingCard = document.getElementById('suCheckingCard');
+            var errorCard = document.getElementById('suErrorCard');
+            var checkBtn = document.getElementById('suCheckBtn');
+            if (updateCard)   updateCard.style.display = 'none';
+            if (upToDateCard) upToDateCard.style.display = 'none';
+            if (errorCard)    errorCard.style.display = 'none';
+            if (checkingCard) checkingCard.style.display = 'block';
+            if (checkBtn)     checkBtn.disabled = true;
+            fetch('/api/check_update_now', {method:'POST'})
+                .then(function(){ 
+                    // Poll /api/update_status after 8 s to let the checker run
+                    setTimeout(function(){
+                        if (checkingCard) checkingCard.style.display = 'none';
+                        if (checkBtn)     checkBtn.disabled = false;
+                        suLoadStatus();
+                    }, 8000);
+                })
+                .catch(function(){
+                    if (checkingCard) checkingCard.style.display = 'none';
+                    if (checkBtn)     checkBtn.disabled = false;
+                    if (errorCard) { errorCard.textContent = 'Update check failed.'; errorCard.style.display = 'block'; }
+                });
+        }
+
+        function suInstallUpdate() {
+            var installBtn = document.getElementById('suInstallBtn');
+            if (installBtn) { installBtn.disabled = true; installBtn.innerHTML = '<span class="su-spinner"></span> Installing…'; }
+            fetch('/api/apply_pending_update', {method:'POST'})
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if (!d.success) {
+                        if (installBtn) { installBtn.disabled = false; installBtn.innerHTML = '<i class="bi bi-download"></i> Install Update'; }
+                        alert(d.error || 'Could not start update.');
+                    }
+                    // If success the Qt dialog opens — app will close itself when user confirms
+                })
+                .catch(function(){
+                    if (installBtn) { installBtn.disabled = false; installBtn.innerHTML = '<i class="bi bi-download"></i> Install Update'; }
+                });
+        }
+        // ── End Software Update panel ──────────────────────────────────────
         function iaHandleFile(file) {
             if (!file) return;
             var allowed = ['image/jpeg','image/png','image/bmp','image/webp'];
@@ -1504,7 +1689,7 @@
                 imageHtml = `<div class="latest-image-slot">
                         <img src="/api/image/${record.ImageFileName}?t=${_latestImgTs}" 
                             class="latest-image" 
-                            alt="Latest Detection">
+                            alt="Current Detection">
                     </div>`;
             } else {
                 imageHtml = '<div class="latest-image-slot"><div class="no-detection">No image available</div></div>';
@@ -1993,6 +2178,10 @@
                     }, 80);
                 }
                 // Do NOT auto-show popup here — only show after user explicitly clicks Test button
+            }
+            // Load Software Update status when entering that section
+            if (sectionName === 'softwareupdate') {
+                suLoadStatus();
             }
             // Update check marks for visited sections
             updateNavCheckMarks();
@@ -2492,16 +2681,33 @@
             }
         }
         
-        // Close application
-        async function closeApplication() {
-            try {
-                await fetch('/api/shutdown', { method: 'POST' });
-                // Give a moment for the shutdown request to be processed
-                setTimeout(() => {
-                    window.close();
-                }, 500);
-            } catch (error) {
-                console.error('Error closing application:', error);
+        // Close application — immediate, no popup
+        function closeApplication() {
+            fetch('/api/shutdown', { method: 'POST' }).catch(()=>{});
+        }
+
+        // ── Minimize / Restore handlers (called by PyQt5 changeEvent via runJavaScript) ──
+        function onWindowMinimized() {
+            document.documentElement.classList.add('window-minimized');
+            document.body.classList.add('window-minimized');
+            // Stop MJPEG stream to free CPU / bandwidth
+            var streamImg = document.getElementById('stream');
+            if (streamImg && streamImg.src && !streamImg.dataset.streamSrc) {
+                streamImg.dataset.streamSrc = streamImg.src;
+                streamImg.src = '';
+            }
+        }
+
+        function onWindowRestored() {
+            document.documentElement.classList.remove('window-minimized');
+            document.body.classList.remove('window-minimized');
+            document.documentElement.style.height = '';
+            document.body.style.height = '';
+            // Restart MJPEG stream
+            var streamImg = document.getElementById('stream');
+            if (streamImg && streamImg.dataset.streamSrc) {
+                streamImg.src = streamImg.dataset.streamSrc;
+                delete streamImg.dataset.streamSrc;
             }
         }
         
