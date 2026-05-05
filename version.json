@@ -1,7 +1,7 @@
 {
-  "version": "1.0.40",
+  "version": "1.0.41",
   "build_date": "2026-05-06",
-  "release_notes": "UI: rename Latest Detection to Latest Detections",
+  "release_notes": "Fix: revert launcher to original update flow (no extra confirmation popup)",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -28,8 +28,8 @@
       "name": "anpr.exe",
       "dest": "anpr.exe",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/anpr.exe",
-      "sha256": "86d954eaed6fbf20fb4324965f43da0cacc51e9b4eda49285d924880212ebf73",
-      "size": 10960423
+      "sha256": "36c8d073a3f0e006f71dc8376886f0ff95d59cf1a4039568234d868605b5b35b",
+      "size": 10960852
     }
   ]
 }
