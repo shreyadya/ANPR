@@ -1,7 +1,7 @@
 {
-  "version": "1.0.25",
+  "version": "1.0.26",
   "build_date": "2026-05-05",
-  "release_notes": "Test: Smart Detection heading",
+  "release_notes": "Restore: Latest Detection heading",
   "files": [
     {
       "name": "_internal_server.pyd",
@@ -14,7 +14,7 @@
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "747d59f8813d7903fac3ee7e5406d0e87be68b294d64a618769c430c68d0c61b",
+      "sha256": "91240d61b8c207365a062a1c3331e1cf2c87e15f15fb0eb4ed68efa897022dd6",
       "size": 119012
     },
     {
