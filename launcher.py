@@ -44,7 +44,16 @@ def main():
         app_dir = os.path.dirname(os.path.abspath(__file__))
 
     _log_launcher_event(app_dir, f'launcher start frozen={getattr(sys, "frozen", False)} exe={sys.executable}')
-    
+
+    # Clean up any *.old files left by updater after renaming locked executables
+    for _old_file in os.listdir(app_dir):
+        if _old_file.endswith('.old'):
+            try:
+                os.remove(os.path.join(app_dir, _old_file))
+                _log_launcher_event(app_dir, f'cleaned up: {_old_file}')
+            except Exception:
+                pass
+
     # Paths
     venv_python = os.path.join(app_dir, 'venv', 'Scripts', 'python.exe')
 
@@ -374,8 +383,27 @@ def main():
                 os.remove(flag_path)
             except Exception:
                 pass
-            new_version = _do_update_in_launcher(app_dir)
-            # Restart app with newly replaced files
+            new_version, launcher_updated = _do_update_in_launcher(app_dir)
+            if launcher_updated:
+                # The launcher exe itself was replaced. This process is now
+                # running as anpr.exe.old — hand off to the new anpr.exe and exit.
+                import subprocess as _sp
+                new_exe = os.path.join(app_dir, 'anpr.exe')
+                _log_launcher_event(app_dir, f'launcher updated — spawning new exe and exiting: {new_exe}')
+                # Strip PyInstaller-injected env vars so the new process
+                # uses its own _MEIPASS, not the old (soon-to-be-deleted) one.
+                _pyi_vars = {'_MEIPASS', 'TCL_LIBRARY', 'TK_LIBRARY', 'TKPATH',
+                             'TCL_LIBRARY8_6', 'TK_LIBRARY8_6'}
+                _clean_env = {k: v for k, v in os.environ.items()
+                              if k not in _pyi_vars}
+                _sp.Popen([new_exe], cwd=app_dir, env=_clean_env)
+                # Use os._exit(0) — skips atexit handlers including PyInstaller's
+                # _MEI cleanup. PyInstaller 6.x shares the same _MEI dir between
+                # two instances of the same binary (content-hash addressing). If
+                # sys.exit() ran, the atexit cleanup would delete the _MEI dir
+                # while the newly spawned exe is still using it → crash.
+                os._exit(0)
+            # Restart pyd app with newly replaced files
             process = launch_process()
             show_splash(process)
             # show "✓ Updated" toast while app is running
@@ -432,8 +460,9 @@ def _do_update_in_launcher(app_dir):
     log(f'manifest      : {os.path.exists(manifest_path)}')
     log(f'pending_dir   : {os.path.exists(pending_dir)}')
 
-    _done        = [False]
-    _new_version = [None]
+    _done             = [False]
+    _new_version      = [None]
+    _launcher_updated = [False]  # True when anpr.exe itself was replaced
 
     def _do_work():
         try:
@@ -452,6 +481,10 @@ def _do_update_in_launcher(app_dir):
                 log(f'ERROR reading manifest: {e}')
                 return
 
+            # Executables that may be locked (running) when the launcher does the update.
+            # The launcher itself (anpr.exe) is still alive — rename releases the name slot.
+            RENAME_FIRST = {'anpr.exe', 'updater.exe', 'anpr_setup.exe'}
+
             errors = []
             for item in manifest.get('files', []):
                 name     = item.get('name', '')
@@ -469,25 +502,52 @@ def _do_update_in_launcher(app_dir):
                 if d:
                     os.makedirs(d, exist_ok=True)
 
-                bak = dst + '.bak'
-                if os.path.exists(dst):
+                use_rename = os.path.basename(dst).lower() in RENAME_FIRST
+
+                if use_rename and os.path.exists(dst):
+                    # Rename the running exe — Windows allows this; releases the name slot
+                    old_bak = dst + '.old'
                     try:
-                        _sh.copy2(dst, bak)
+                        if os.path.exists(old_bak):
+                            os.remove(old_bak)
                     except Exception:
                         pass
-
-                try:
-                    _sh.copy2(src, dst)
-                    if os.path.exists(bak):
-                        try: os.remove(bak)
+                    try:
+                        os.rename(dst, old_bak)
+                        log(f'  renamed {name} -> {os.path.basename(old_bak)}')
+                    except Exception as e:
+                        errors.append(name)
+                        log(f'  ERROR renaming {name}: {e}')
+                        continue
+                    try:
+                        _sh.copy2(src, dst)
+                        log(f'  OK: {name} replaced (rename-copy)')
+                        if os.path.basename(dst).lower() == 'anpr.exe':
+                            _launcher_updated[0] = True
+                    except Exception as e:
+                        errors.append(name)
+                        log(f'  ERROR copying {name}: {e}')
+                        try: os.rename(old_bak, dst)
                         except Exception: pass
-                    log(f'  OK: {name} replaced')
-                except Exception as e:
-                    errors.append(name)
-                    log(f'  ERROR replacing {name}: {e}')
-                    if os.path.exists(bak):
-                        try: _sh.copy2(bak, dst)
-                        except Exception: pass
+                else:
+                    bak = dst + '.bak'
+                    if os.path.exists(dst):
+                        try:
+                            _sh.copy2(dst, bak)
+                        except Exception:
+                            pass
+                    try:
+                        _sh.copy2(src, dst)
+                        if os.path.exists(bak):
+                            try: os.remove(bak)
+                            except Exception: pass
+                        log(f'  OK: {name} replaced')
+                    except Exception as e:
+                        errors.append(name)
+                        log(f'  ERROR replacing {name}: {e}')
+                        if os.path.exists(bak):
+                            try: _sh.copy2(bak, dst)
+                            except Exception: pass
 
             # Update version.json
             new_ver = manifest.get('version', '')
@@ -521,11 +581,13 @@ def _do_update_in_launcher(app_dir):
     _th.Thread(target=_do_work, daemon=True).start()
 
     # Show "Installing" UI on main thread; poll until work thread finishes
+    # (returns (new_version, launcher_updated) after UI closes)
     try:
         import tkinter as _tk
         root = _tk.Tk()
         root.title('ANPR Update')
         root.overrideredirect(True)
+        root.wm_attributes('-toolwindow', True)  # keep off taskbar during update
         W, H = 460, 120
         sx = (root.winfo_screenwidth()  - W) // 2
         sy = (root.winfo_screenheight() - H) // 2
@@ -550,7 +612,7 @@ def _do_update_in_launcher(app_dir):
         while not _done[0]:
             _t2.sleep(0.5)
 
-    return _new_version[0]
+    return _new_version[0], _launcher_updated[0]
 
 
 def _bootstrap_update_after_crash(app_dir, returncode, manifest_path, pending_dir):

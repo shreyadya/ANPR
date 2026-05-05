@@ -29,12 +29,22 @@ GITHUB_RAW_BASE = "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates
 # Files to include in the update.
 # "src"  : path inside ANPR_APP (source of the built file)
 # "dest" : destination path inside the client's ANPR_APP folder
+#
+# ALWAYS included (core app files rebuilt every release):
 UPDATE_FILES = [
     {"name": "_internal_server.pyd", "src": "ANPR_APP/_internal_server.pyd",  "dest": "_internal_server.pyd"},
+    {"name": ".res2.enc",            "src": "ANPR_APP/.res2.enc",             "dest": ".res2.enc"},
     {"name": ".res3.enc",            "src": "ANPR_APP/.res3.enc",             "dest": ".res3.enc"},
     {"name": ".res4.enc",            "src": "ANPR_APP/.res4.enc",             "dest": ".res4.enc"},
-    # Add more files here if needed, e.g.:
+    {"name": "ANPR_SETUP.exe",       "src": "ANPR_APP/ANPR_SETUP.exe",        "dest": "ANPR_SETUP.exe"},
+    {"name": "requirements.txt",     "src": "ANPR_APP/requirements.txt",      "dest": "requirements.txt"},
+    # ── Launcher / updater (uncomment when you rebuild these exes) ──────────
+    # {"name": "anpr.exe",           "src": "ANPR_APP/anpr.exe",              "dest": "anpr.exe"},
     # {"name": "updater.exe",        "src": "ANPR_APP/updater.exe",           "dest": "updater.exe"},
+    # ── Config / other files (uncomment as needed) ───────────────────────────
+    # {"name": "config.json",        "src": "ANPR_APP/config.json",           "dest": "config.json"},
+    # {"name": ".env",               "src": "ANPR_APP/.env",                  "dest": ".env"},
+    # {"name": "wb_info.json",       "src": "ANPR_APP/wb_info.json",          "dest": "wb_info.json"},
 ]
 
 # Output folder for update files (will be created if missing)

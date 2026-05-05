@@ -1,0 +1,41 @@
+# YOLO + OpenCV
+# ultralytics==8.0.196
+ultralytics==8.3.0
+
+numpy==1.26.4
+opencv-python==4.10.0.84
+
+# MQTT
+paho-mqtt>=1.6.1
+
+# PaddleOCR + PaddlePaddle (stable CPU version) - v3 models
+paddlepaddle==3.2.2
+paddleocr>=2.8.1  # Newer version with better PyMuPDF compatibility
+
+# Fix pydantic/annotated_types compatibility issue
+pydantic>=2.0.0,<3.0.0
+annotated-types>=0.6.0
+
+# OCR utilities
+python-Levenshtein==0.25.1
+pillow
+shapely
+tqdm
+pyclipper
+visualdl
+
+# GUI (PyQt)
+PyQt5>=5.15.9
+PyQtWebEngine>=5.15.6
+
+# Database Drivers
+pyodbc  # SQL Server
+pymysql>=1.1.0  # MySQL
+psycopg2-binary>=2.9.0  # PostgreSQL
+pymongo>=4.0.0  # MongoDB
+
+# Web Framework
+Flask>=2.3.0
+
+# Security
+cryptography
