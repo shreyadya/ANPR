@@ -1,7 +1,7 @@
 {
-  "version": "1.0.43",
+  "version": "1.0.44",
   "build_date": "2026-05-06",
-  "release_notes": "UI: rename Latest Detections to Current Detection",
+  "release_notes": "Fix: restart app when pyd exits with update-signal but no update is available",
   "files": [
     {
       "name": "_internal_server.pyd",

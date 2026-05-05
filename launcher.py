@@ -415,6 +415,19 @@ def main():
                 show_splash(process)
                 process.wait()
 
+        # pyd exited with the update-signal code but no update was triggered
+        # (already on latest version, or pyd crashed before writing artifacts).
+        # Restart the app so it doesn't silently vanish.
+        if not update_triggered and process.returncode == 3221226505:
+            _log_launcher_event(app_dir, 'pyd exited 3221226505 with no update available — restarting app')
+            process = launch_process()
+            show_splash(process)
+            process.wait()
+            while process.returncode == 123:
+                process = launch_process()
+                show_splash(process)
+                process.wait()
+
         # Check if process exited cleanly
         normal_exit_codes = {0, 124, 3221225786, 0xC000013A, 3221226505, 0xC0000409}
         update_pending = (
