@@ -1,14 +1,14 @@
 {
-  "version": "1.0.59",
+  "version": "1.0.60",
   "build_date": "2026-05-06",
-  "release_notes": "test: .res2.enc OTA",
+  "release_notes": "test:ANPR_SETUP.exe",
   "files": [
     {
-      "name": ".res2.enc",
-      "dest": ".res2.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res2.enc",
-      "sha256": "c5816fe5e46090ea68da487cffa34db735995d52c15221d2228d3f0ca5eeb351",
-      "size": 6444772
+      "name": "ANPR_SETUP.exe",
+      "dest": "ANPR_SETUP.exe",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/ANPR_SETUP.exe",
+      "sha256": "138f8f7a3fce9109861e12e055804ab2a3e14da9c033c64c3bc891d769d6a71f",
+      "size": 23810191
     }
   ]
 }
