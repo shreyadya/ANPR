@@ -1,20 +1,13 @@
 {
-  "version": "1.0.61",
+  "version": "1.0.62",
   "build_date": "2026-05-06",
   "release_notes": "test:res3.enc",
   "files": [
     {
-      "name": "_internal_server.pyd",
-      "dest": "_internal_server.pyd",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "32523aef7b441157fbad1e30ed914e2d30fb81314e9deac28a050a90defc5688",
-      "size": 1656320
-    },
-    {
       "name": ".res3.enc",
       "dest": ".res3.enc",
       "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "60133982530a277ed35a6a21f2508129ccd1d44777bbcd147e6835dfcbb51431",
+      "sha256": "ad92584d9418fd5fe830774ed23f34cf42cbf631a989a49ce3ef6380ec94a688",
       "size": 119012
     }
   ]
