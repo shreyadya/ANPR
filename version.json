@@ -1,21 +1,14 @@
 {
-  "version": "1.0.56",
+  "version": "1.0.57",
   "build_date": "2026-05-06",
-  "release_notes": "Test:checking",
+  "release_notes": "test: ANPR_SETUP.exe OTA",
   "files": [
     {
-      "name": "_internal_server.pyd",
-      "dest": "_internal_server.pyd",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/_internal_server.pyd",
-      "sha256": "e7cd0429ba13b9231bc21c7e951813d8470c93245db66f7a6ccd08d85830ecc1",
-      "size": 1650176
-    },
-    {
-      "name": ".res3.enc",
-      "dest": ".res3.enc",
-      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/.res3.enc",
-      "sha256": "0af759f14477089b87388bd4d43c10579a4822c51f9f332cbcba1ec36ba169ea",
-      "size": 119012
+      "name": "ANPR_SETUP.exe",
+      "dest": "ANPR_SETUP.exe",
+      "url": "https://raw.githubusercontent.com/shreyadya/ANPR/main/updates/ANPR_SETUP.exe",
+      "sha256": "d417818a176fe402a787cb8d5bdbd8490c35ca1509c9f76eae62fc8ad5519df5",
+      "size": 23808944
     }
   ]
 }
